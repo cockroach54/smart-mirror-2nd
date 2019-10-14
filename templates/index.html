@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <title>Vu-visor</title>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
+    <!-- Compiled and minified CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+
+    <!-- for socket.io server -->
+    <!-- <script
+      src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+      integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I="
+      crossorigin="anonymous"
+    ></script> -->
+
+    <!-- CODELAB: Add link rel manifest -->
+    <link rel="manifest" href="manifest.json" />
+    <!-- CODELAB: Add iOS meta tags and icons -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Vu-visor PWA" />
+    <link rel="apple-touch-icon" href="images/icons/icon-152x152.png" />
+    <!-- CODELAB: Add description here -->
+    <meta name="description" content="Vu-visor app" />
+    <!-- CODELAB: Add meta theme-color -->
+    <meta name="theme-color" content="#2F3BA2" />
+
+    <style>
+      #cntr {
+        margin: 10px auto;
+        /* width: 90%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center; */
+      }
+      #videoWrapper {
+        position: relative;
+        width: 420px;
+        margin: auto;
+      }
+      hr {
+        width: 100%;
+      }
+      video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: -1;
+        /* Mirror the local video */
+        transform: scale(-1, 1);
+        /*For Firefox (& IE) */
+        -webkit-transform: scale(-1, 1);
+        /*for Chrome & Opera (& Safari) */
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      #pred {
+        font-weight: bolder;
+        color: red;
+      }
+      button {
+        width: 100%;
+      }
+      #tab-wrapper {
+        margin: 0;
+        width: 100%;
+        position: fixed;
+        bottom: 0;
+        z-index: 999;
+      }
+      .my-toast{
+        width: 85%;
+        margin: auto;
+        background-color: rgba(100, 100, 100, .5)
+      }
+      #toast-container{
+        bottom: 160px !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="tab-wrapper" class="row">
+      <div class="col s12">
+        <ul id="my-tabs" class="tabs">
+          <li class="tab col s3" style="line-height:initial">
+            <a href="#Skin-scan-page" style="display:flex; flex-direction:column; justify-content:center">
+              <i class="material-icons">camera_alt</i>
+              <div style="font-size: 0.4em">Skin scan</div></a
+            >
+          </li>
+          <li class="tab col s3" style="line-height:initial">
+            <a href="#Beauty-guide-page" style="display:flex; flex-direction:column; justify-content:center">
+              <i class="material-icons">book</i>
+              <div style="font-size: 0.4em">Guide</div></a
+            >
+          </li>
+          <li class="tab col s3" style="line-height:initial">
+            <a href="#My-cosmetics-page" style="display:flex; flex-direction:column; justify-content:center">
+              <i class="material-icons">shopping_basket</i>
+              <div style="font-size: 0.4em">Cosmetics</div></a
+            >
+          </li>
+          <li class="tab col s3" style="line-height:initial">
+            <a href="#Diary-page" style="display:flex; flex-direction:column; justify-content:center">
+              <i class="material-icons">event_note</i>
+              <div style="font-size: 0.4em">Diary</div></a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Test page -->
+    <div id="Skin-scan-page" class="col s12">
+      <div id="cntr" class="container">
+        <div class="fixed-action-btn" style="top:5px">
+          <a
+            id="record"
+            isRecording="no"
+            class="btn-floating btn-large waves-effect waves-light green"
+            ><i class="Large material-icons">videocam</i></a
+          >
+        </div>
+        <div id="videoWrapper">
+          <video id="myVideo" autoplay></video>
+        </div>
+        <div id="spinner" class="progress" style="display:none">
+          <div class="indeterminate"></div>
+        </div>
+        <hr style="border-color:#26A69A" />
+  
+        <div id="cards" class="row"></div>
+  
+        <div class="row" style="margin-bottom:0">
+          <div class="input-field col s3">
+            <button id="detect" class="waves-effect waves-light btn-small">
+              detect
+            </button>
+          </div>
+          <div class="input-field col s2">
+            <!-- <button id="socketDetect" class="waves-effect waves-light btn-small">
+              sock
+            </button> -->
+            <button id="faceRecog" class="waves-effect waves-light btn-small">
+              face
+            </button>
+          </div>
+          <div class="input-field col s2">
+            <button id="infer" class="waves-effect waves-light btn-small">
+              infer
+            </button>
+          </div>
+          <div class="input-field col s5">
+            <p id="pred"></p>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="input-field col s3">
+            <p>FPS: <span id="fps" style="color: red; font-weight: bold">0</span></p>
+          </div>
+          <div class="input-field col s3">
+            <label>
+              <input id="onlyOne" class="filled-in" type="checkbox" checked="checked"/>
+              <span>only one</span>
+            </label>
+          </div>
+          <div class="input-field col s3">
+            <input id="itemName" type="text" value="default" />
+            <label for="itemName">itemName</label>
+          </div>
+          <div class="input-field col s3">
+            <input id="userName" type="text" value="lsw" />
+            <label for="userName">userName</label>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="input-field col s4">
+            <input id="threshold" type="number" value="0.85" step="0.01"/>
+            <label for="threshold">threshold</label>
+          </div>
+          <div class="input-field col s4">
+            <input id="imageScale" type="number" value="1.0" step="0.1"/>
+            <label for="imageScale">imageScale</label>
+          </div>
+
+          <div class="input-field col s4">
+            <p style="margin: 0">
+              <label>
+                <input name="radio-for-box" type="radio" checked/>
+                <span>show box</span>
+              </label>
+            </p>
+            <p style="margin: 0">
+              <label>
+                <input name="radio-for-box" type="radio" />
+                <span>no box</span>
+              </label>
+            </p>
+          </div>
+
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="input-field col s3">
+            <input id="rpnNumX" type="number" value="3" step="1"/>
+            <label for="rpnNumX">rpnNumX</label>
+          </div>
+          <div class="input-field col s3">
+            <input id="rpnNumY" type="number" value="1" step="1"/>
+            <label for="rpnNumY">rpnNumY</label>
+          </div>
+          <div class="input-field col s3">
+            <input id="rpnScaleX" type="number" value="1.2" step="0.1"/>
+            <label for="rpnScaleX">rpnScaleX</label>
+          </div>
+          <div class="input-field col s3">
+            <input id="rpnScaleY" type="number" value="0.8" step="0.1"/>
+            <label for="rpnScaleY">rpnScaleY</label>
+          </div>
+        </div>
+        <p id="screenInfo"></p>
+        <hr style="border-color:#26A69A" />
+        <div>
+          <img id="plot" src="" style="width:100%" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenario page -->
+    <div id="Beauty-guide-page" class="col s12">
+      <div id="cntr" class="container">
+        <h5 id="comment" style="text-align: center; position: fixed; bottom:60px; width: 90%"></h5>
+        <div id="detectMode" style="position:fixed; left:5px; top:5px"></div>  
+      </div>
+    </div>
+
+    <!-- Cosmetic list page -->
+    <div id="My-cosmetics-page" class="col s12">
+      <div class="container">
+        <ul id="my-collection" class="collection">
+        </ul>
+      </div>
+    </div>
+
+    <!-- Debugging page -->
+    <div id="Diary-page" class="col s12">
+      <div id="cntr" class="container">
+        Diary page
+      </div>
+    </div>
+
+    <!-- For modal -->
+    <!-- Modal Structure -->
+    <div id="pral-modal" class="modal modal-fixed-footer">
+      <div class="modal-content">
+        <h4 style="text-align:center">다음에 사용해 주세요</h4>
+        <div style="width: 70%; margin: auto">
+          <image src="/images/pral.jpg" style="width: 100%"></image>
+        </div>
+        <p style="font-size: 1rem; font-weight: bold">비타민, 레티놀이 함유된 화장품을 사용하고 LG 프라엘 마스크를 사용하시면 안돼요.</p>
+        <p><span style="color:red">Tip. </span>세안 후 스킨 케어 전에 LG 프라엘 마스크를 사용하시면 가장 좋으며 피부기 많이 건조하다면 스킨 후 사용하시는 것은 권장합니다.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">확인</a>
+      </div>
+    </div>
+
+    <script
+      id="objDetect"
+      src="objDetect.js"
+      data-source="myVideo"
+      data-uploadWidth="640"
+    ></script>
+    <!-- <script type="text/javascript" charset="utf-8" src="socket.js"></script> -->
+
+    <script>
+      // CODELAB: Register service worker.
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          window.myItemList = ["LG-praL", "piky-biky"]; // 내 화장품 리스트
+          // for material css init
+          const myTabs = document.querySelector("#my-tabs");
+          //-------------- for auto faceRecogBtn start ---------------
+          window.prevTabIdx = 0;
+          window.currTabIdx = 0;
+          tabInstanceOnshow = () => {
+            window.prevTabIdx = window.currTabIdx;
+            window.currTabIdx = window.tabInstance.index;
+            let clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+            });
+            if(prevTabIdx===1){
+              console.log('[Scenario-page exit]');
+              terminateAllAPI();
+            }
+            if(prevTabIdx===0){
+              console.log('[Test-page exit]');
+              terminateAllAPI();
+            }
+            if(currTabIdx===1){
+              console.log('[Scenario-page enter]');
+              // face recog api start
+              faceRecogBtn.dispatchEvent(clickEvent);
+            }
+          }
+          //-------------------------------------------------
+
+          // modal init
+          let elems = document.querySelectorAll('.modal');
+          window.modalInstances = M.Modal.init(elems, {});
+
+          // tab-page init
+          window.tabInstance = M.Tabs.init(myTabs, {onShow:tabInstanceOnshow});
+          let testTabBtn = tabInstance.$tabLinks[0] // test page
+          let scenarioTabBtn = tabInstance.$tabLinks[1]; // scenario page
+          let cosmeticTabBtn = tabInstance.$tabLinks[2]; // item page
+          let diaryTabBtn = tabInstance.$tabLinks[3]; // diary page
+          cosmeticTabBtn.addEventListener('click', handleCosmetic);
+          scenarioTabBtn.addEventListener('click', handleScenario);
+          testTabBtn.addEventListener('click', handleTest);
+          diaryTabBtn.addEventListener('click', handleDiary);
+
+
+          // for service worker 
+          // 현재 사용되지는 않음
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .then(reg => {
+              console.log("Service worker registered.", reg);
+            })
+            .catch(() => {
+              console.error("Service worker register error!");
+            });
+        });
+      }
+
+
+      // collection에 렌더링
+      function handleCosmetic(){
+        let collectionEl = document.querySelector('#my-collection');
+        let collectionHTML = '';
+        for(let label of myItemList){
+          let item = `
+            <li class="collection-item avatar">
+              <img src="images_ext/${label}/${label}_1.jpg" alt="" class="circle">
+              <span class="title">${label.split('-')[0]}</span>
+              <p>${label.split('-')[1]}<br>등록일: 2019-10-04</p>
+              <a href="#modal1-${label}" class="secondary-content modal-trigger"><i class="material-icons">grade</i></a>
+            </li>
+
+            <!-- Modal Structure -->
+            <div id="modal1-${label}" class="modal">
+              <div class="modal-content" style="text-align:center">
+                <h5>My Cosmetics information</h5>
+                <hr/>
+                <div class="row">
+                  <div class="col s10 offset-s1 m8 offset-m2">
+                    <div class="card">
+                      <div class="card-image">
+                        <img src="images_ext/${label}/${label}_1.jpg">
+                        <span class="card-title">${label}</span>
+                      </div>
+                      <div class="card-content">
+                        <p>울릉도 해양 심층수의 수분 밸런스와 천연 효소 각질 제거로 더욱 순하게 케어함</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <hr/>
+                <div>
+                  <img src="images/recommend.jpg" style="width:100%">
+                </div>
+
+              </div>
+              <div class="modal-footer">
+                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Agree</a>
+              </div>
+            </div>
+          `;
+          collectionHTML += item;
+        }
+        collectionEl.innerHTML = collectionHTML;
+        // modal init
+        let _elems = document.querySelectorAll('.modal');
+        M.Modal.init(_elems, {});
+      }
+
+      function handleScenario(){
+        // 비디오 가져오기
+        const videoWrapperEl = document.querySelector('#videoWrapper');
+        const scenarioTab = document.querySelector('#Beauty-guide-page');
+        scenarioTab.firstElementChild.prepend(videoWrapperEl);
+        // 커멘트 영역
+        const commentEl = document.querySelector('#comment');
+        // 모드확인 영역
+        const detectModeEl = document.querySelector('#detectMode');
+        detectModeEl.innerHTML = 'F';
+      }
+
+      function handleTest(){
+        // 비디오 가져오기
+        const videoWrapperEl = document.querySelector('#videoWrapper');
+        const testTab = document.querySelector('#Skin-scan-page');
+        testTab.firstElementChild.prepend(videoWrapperEl);
+      }
+
+      function handleDiary(){
+        // 비디오 가져오기
+        const diaryTab = document.querySelector('#Diary-page');
+        diaryTab.innerText = JSON.stringify(smoother.detctedItemHistory);
+      }
+
+      function terminateAllAPI(){
+        console.log('[Terminate all api]');
+        // all api terminate
+        isFaceRecognating = false;
+        isDetecting = false;
+        document.querySelector('#pred').innerText = '';
+        faceRecogBtn.style.color = 'white';
+        detectBtn.style.color = 'white';
+      }
+    </script>
+  </body>
+</html>

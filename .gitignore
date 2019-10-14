@@ -1,0 +1,6 @@
+static/videos/*
+static/videos_resized/*
+static/images_ext/*
+deprecated/*
+.vscode/*
+__pycache__/
