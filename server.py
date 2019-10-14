@@ -12,8 +12,11 @@ from utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--d', type=str, default='T', choices=['T','F'],
             help="Flask debug True or False. On demo set this False")
+parser.add_argument('--port', type=int, default=5000,
+            help="Flask server port")            
 
 args = parser.parse_args()
+PORT = args.port
 DEBUG = True if args.d=='T' else False
 
 class MyEncoder(json.JSONEncoder):
@@ -237,8 +240,8 @@ def api_faceRecog():
 
 if __name__ == '__main__':
 	# without SSL
-    # app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    # app.run(debug=DEBUG, host='0.0.0.0', port=PORT, threaded=True)
 
 	# with SSL - debug, threded를 false로 하면 시연시 속도가 빨라짐
     print('[DEBUG]:', DEBUG)
-    app.run(debug=DEBUG, host='0.0.0.0', port=5000, threaded=False, ssl_context=('ssl/cert.pem', 'ssl/key.pem'))
+    app.run(debug=DEBUG, host='0.0.0.0', port=PORT, threaded=False, ssl_context=('ssl/cert.pem', 'ssl/key.pem'))
