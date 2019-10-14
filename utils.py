@@ -61,6 +61,7 @@ def rpn(im_opencv, num_boxs, scale=1):
         edge_boxes = cv2.ximgproc.createEdgeBoxes()
         edge_boxes.setMaxBoxes(num_boxs)
         boxes = edge_boxes.getBoundingBoxes(edges, orimap)
+        if type(boxes)==tuple: boxes=boxes[0] # 버전에따라 다르게 나오는거 보정
         return boxes, im_opencv_scaled
     
     (boxes, im_opencv_scaled) = makeEdgeBox(scale)
