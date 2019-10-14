@@ -1,20 +1,10 @@
-import base64
-from io
-from PIL
-from flask
-import sys, json, random
-
-import cv2
-from matplotlib
-import math
-import statistics
-from glob 
-
-import torch
-from torchvision
-import numpy 
-import pandas
-import os, shutil, cv2
-from time 
-import subprocess
-from tqdm
+pillow>=4.0.0 
+flask>=0.12.2
+flask-cors>=3.0.3
+matplotlib>=2.2.2
+torch>=1.0.1 
+torchvision>=0.2.2
+numpy>=1.14.2 
+pandas>=0.20.3
+tqdm>=4.19.8
+seaborn>=0.9.0

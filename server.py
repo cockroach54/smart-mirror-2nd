@@ -36,12 +36,12 @@ model.eval()
 # make model dataset first 
 model.makeAllReference_online('static/images_ext')
 
-"""
-Load UBBR model
-now not used for speed
-"""
-LOAD_PATH = '../../torch_models/ubbr-iou-max-10.pt'
-UBBR_model = torch.load(LOAD_PATH)
+# """
+# Load UBBR model
+# now not used for speed
+# """
+# LOAD_PATH = '../../torch_models/ubbr-iou-max-10.pt'
+# UBBR_model = torch.load(LOAD_PATH)
 
 
 def detect_boxes(req):
