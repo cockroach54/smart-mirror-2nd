@@ -1,7 +1,7 @@
 static/videos/*.mp4
 static/videos_resized/*
-static/images_ext/*
-static/bak/*
+# static/images_ext/*
+static/images_ext_bak/*
 deprecated/*
 .vscode/*
 __pycache__/

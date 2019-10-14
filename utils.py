@@ -63,14 +63,14 @@ def rpn(im_opencv, num_boxs, scale=1):
         boxes = edge_boxes.getBoundingBoxes(edges, orimap)
         return boxes, im_opencv_scaled
     
-    boxes, im_opencv_scaled = makeEdgeBox(scale)
+    (boxes, im_opencv_scaled) = makeEdgeBox(scale)
     # bbox 하나도 없으면 전체샷이라도 저장
     if len(boxes)==0: boxes=np.array([[0,0,im_opencv_scaled.shape[1],im_opencv_scaled.shape[0]]])
     boxes = (boxes/scale).round().astype(np.int)
     # 박스 개수 절반보다 모자라면 스케일 키워서 한번더
     if len(boxes)<(num_boxs/2):
         scale = scale*2
-        _boxes, im_opencv_scaled = makeEdgeBox(scale)
+        (_boxes, im_opencv_scaled) = makeEdgeBox(scale)
         if len(_boxes)>0:
             _boxes = (_boxes/scale).round().astype(np.int)
             boxes = np.concatenate([boxes,_boxes])[:num_boxs] # 이전 스케일의 박스와 concat

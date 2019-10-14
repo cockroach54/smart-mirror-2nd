@@ -1,0 +1,349 @@
+# packages in environment at C:\ProgramData\Anaconda3:
+#
+# Name                    Version                   Build  Channel
+_ipyw_jlab_nb_ext_conf    0.1.0            py36he6757f0_0  
+_tflow_select             2.1.0                       gpu  
+absl-py                   0.1.13                   pypi_0    pypi
+aiohttp                   3.5.4                    pypi_0    pypi
+aioice                    0.6.15                   pypi_0    pypi
+alabaster                 0.7.10           py36hcd07829_0  
+anaconda                  custom                   py36_0    https://repo.continuum.io/pkgs/free
+anaconda-client           1.6.5            py36hd36550c_0  
+anaconda-project          0.8.0            py36h8b3bf89_0  
+aniso8601                 3.0.0                    pypi_0    pypi
+apex                      0.1                      pypi_0    pypi
+apscheduler               3.5.3                    pypi_0    pypi
+asn1crypto                0.22.0           py36h8e79faa_1  
+astor                     0.6.2                    pypi_0    pypi
+astroid                   1.5.3            py36h9d85297_0  
+astropy                   2.0.2            py36h06391c4_4  
+async-timeout             3.0.1                    pypi_0    pypi
+attrs                     19.1.0                   pypi_0    pypi
+audioread                 2.1.8                    pypi_0    pypi
+autopep8                  1.4.3                    pypi_0    pypi
+babel                     2.5.0                    pypi_0    pypi
+backports                 1.0              py36h81696a8_1  
+backports.shutil_get_terminal_size 1.0.0            py36h79ab834_2  
+backports.weakref         1.0rc1                   py36_0    https://repo.continuum.io/pkgs/free
+beautifulsoup4            4.6.0            py36hd4cc5e8_1  
+bitarray                  0.8.1            py36h6af124b_0  
+bkcharts                  0.2              py36h7e685f7_0  
+blas                      1.0                         mkl  
+blaze                     0.11.3           py36h8a29ca5_0  
+bleach                    1.5.0                    py36_0    https://repo.continuum.io/pkgs/free
+blosc                     1.16.3               h6538335_1    conda-forge
+bokeh                     0.12.7           py36h012f572_1  
+boto                      2.48.0           py36h1a776d2_1  
+boto3                     1.9.130                  pypi_0    pypi
+botocore                  1.12.130                 pypi_0    pypi
+bottleneck                1.2.1            py36hd119dfa_0  
+branca                    0.3.1                    pypi_0    pypi
+bs4                       0.0.1                    pypi_0    pypi
+bz2file                   0.98                     py36_0    https://repo.continuum.io/pkgs/free
+bzip2                     1.0.6                    vc14_1  [vc14]  conda-forge
+ca-certificates           2019.6.16            hecc5488_0    conda-forge
+cachecontrol              0.12.3           py36hfe50d7b_0  
+cachetools                2.1.0                    pypi_0    pypi
+certifi                   2019.6.16                py36_1    conda-forge
+cffi                      1.10.0           py36hae3d1b5_1  
+chardet                   3.0.4            py36h420ce6e_1  
+click                     6.7              py36hec8c647_0  
+cloudpickle               0.4.0            py36h639d8dc_0  
+clyent                    1.2.2            py36hb10d595_1  
+colorama                  0.3.9            py36h029ae33_0  
+comtypes                  1.1.2            py36heb9b3d1_0  
+conda                     4.7.10                   py36_0    conda-forge
+conda-build               3.0.22           py36hd71664c_0  
+conda-env                 2.6.0                h36134e3_1  
+conda-package-handling    1.3.10                   py36_0  
+conda-verify              2.0.0            py36h065de53_0  
+console_shortcut          0.1.1                haa4cab3_2  
+contextlib2               0.5.5            py36he5d52c0_0  
+cryptography              2.4.2            py36h7a1dbc1_0  
+cudatoolkit               10.0.130                      0  
+cudnn                     7.6.0                cuda10.0_0  
+curl                      7.55.1               h3b839b5_4  
+cycler                    0.10.0           py36h009560c_0  
+cython                    0.29.13                  pypi_0    pypi
+cytoolz                   0.8.2            py36h547e66e_0  
+dask                      2.3.0                    pypi_0    pypi
+datashape                 0.5.4            py36h5770b85_0  
+decorator                 4.1.2            py36he63a57b_0  
+distlib                   0.2.5            py36h51371be_0  
+distributed               1.18.3           py36h5be4c3e_0  
+django                    1.11.3                   py36_0    https://repo.continuum.io/pkgs/free
+docutils                  0.14             py36h6012d8f_0  
+entrypoints               0.2.3            py36hfd66bb0_2  
+enum34                    1.1.6                    pypi_0    pypi
+et_xmlfile                1.0.1            py36h3d2d736_0  
+fastcache                 1.0.2            py36hffdae1b_0  
+filelock                  2.0.12           py36hd7ddd41_0  
+fire                      0.1.3                    pypi_0    pypi
+flask                     0.12.2           py36h98b5e8f_0  
+flask-cors                3.0.3            py36h8a3855d_0  
+flask-mysql               1.4.0                    pypi_0    pypi
+flask-restful             0.3.6                    pypi_0    pypi
+flask-socketio            2.9.2            py36he8f55db_0  
+folium                    0.8.2                    pypi_0    pypi
+freetype                  2.9.1                ha9979f8_1  
+future                    0.16.0                   py36_1    https://repo.continuum.io/pkgs/free
+futures                   3.1.1                    pypi_0    pypi
+gast                      0.2.0                    pypi_0    pypi
+gensim                    3.7.1                    pypi_0    pypi
+geos                      3.7.1                h33f27b4_0  
+get_terminal_size         1.0.0                h38e98db_0  
+gevent                    1.2.2            py36h342a76c_0  
+glob2                     0.5              py36h11cc1bd_1  
+google-api-core           1.1.2                    pypi_0    pypi
+google-api-python-client  1.7.5                    pypi_0    pypi
+google-auth               1.4.1                    pypi_0    pypi
+google-auth-httplib2      0.0.3                    pypi_0    pypi
+google-cloud-speech       0.34.0                   pypi_0    pypi
+googleapis-common-protos  1.5.3                    pypi_0    pypi
+got10k                    0.1.3                    pypi_0    pypi
+greenlet                  0.4.12           py36ha00ad21_0  
+grpcio                    1.10.0                   pypi_0    pypi
+gtts                      2.0.3                    pypi_0    pypi
+gtts-token                1.1.3                    pypi_0    pypi
+gunicorn                  19.9.0                   pypi_0    pypi
+gym                       0.10.9                   pypi_0    pypi
+h5py                      2.9.0           nompi_py36h3cb27cb_1102    conda-forge
+hdf5                      1.10.4          nompi_hcc15c50_1106    conda-forge
+heapdict                  1.0.0            py36h21fa5f4_0  
+hgtk                      0.1.3                    pypi_0    pypi
+html5lib                  0.9999999                py36_0    https://repo.continuum.io/pkgs/free
+httplib2                  0.12.0                   pypi_0    pypi
+icc_rt                    2017.0.4             h97af966_0  
+icu                       58.2             vc14hc45fdbb_0  [vc14]
+idna                      2.6              py36h148d497_1  
+idna-ssl                  1.1.0                    pypi_0    pypi
+imageio                   2.4.1                    py36_0  
+imagesize                 0.7.1            py36he29f638_0  
+imgaug                    0.2.9                      py_1    conda-forge
+imutils                   0.5.2                    pypi_0    pypi
+intel-openmp              2018.0.0             hcd89f80_7  
+ipykernel                 4.6.1            py36hbb77b34_0  
+ipython                   6.1.0            py36h236ecc8_1  
+ipython_genutils          0.2.0            py36h3c5d0ee_0  
+ipywidgets                7.0.0            py36h2e74ada_0  
+isort                     4.2.15           py36h6198cc5_0  
+itsdangerous              0.24             py36hb6c5a24_1  
+jdcal                     1.3              py36h64a5255_0  
+jedi                      0.10.2           py36hed927a0_0  
+jinja2                    2.9.6            py36h10aa3a0_1  
+jmespath                  0.9.4                    pypi_0    pypi
+joblib                    0.13.2                   pypi_0    pypi
+jpeg                      9b                   hb83a4c4_2  
+jpype1                    0.6.2                    pypi_0    pypi
+jsonschema                2.6.0            py36h7636477_0  
+jupyter                   1.0.0            py36h422fd7e_2  
+jupyter_client            5.1.0            py36h9902a9a_0  
+jupyter_console           5.2.0            py36h6d89b47_1  
+jupyter_core              4.3.0            py36h511e818_0  
+jupyterlab                0.27.0           py36h34cc53b_2  
+jupyterlab_launcher       0.4.0            py36h22c3ccf_0  
+keras                     2.2.4                    pypi_0    pypi
+keras-applications        1.0.6                    py36_0  
+keras-preprocessing       1.0.5                    py36_0  
+kiwisolver                1.0.1            py36h6538335_0  
+konlpy                    0.4.4                    pypi_0    pypi
+krb5                      1.16.1               hc04afaa_7  
+lazy-object-proxy         1.3.1            py36hd1c21d2_0  
+libarchive                3.3.3                h0643e63_5  
+libcurl                   7.63.0            h2a8f88b_1000  
+libiconv                  1.15                 h1df5818_7  
+libpng                    1.6.35               h2a8f88b_0  
+libprotobuf               3.6.0                h1a1b453_0  
+libssh2                   1.8.0                h7a1dbc1_4  
+libtiff                   4.0.9                h36446d0_2  
+libxml2                   2.9.8                hadb2253_1  
+libxslt                   1.1.29           vc14hf85b8d4_5  [vc14]
+llvmlite                  0.29.0           py36hed17590_1    conda-forge
+locket                    0.2.0            py36hfed976d_1  
+lockfile                  0.12.2           py36h0468280_0  
+lxml                      3.8.0            py36h45350b2_0  
+lz4-c                     1.8.1.2              h2fa13f4_0  
+lzo                       2.10                 h6df0209_2  
+markdown                  2.6.11                   pypi_0    pypi
+markupsafe                1.0              py36h0e26971_1  
+maskrcnn-benchmark        0.1                       dev_0    <develop>
+matplotlib                2.2.2            py36had4c4a9_2  
+mccabe                    0.6.1            py36hb41005a_1  
+menuinst                  1.4.16           py36he774522_0  
+mesh-tensorflow           0.0.4                    pypi_0    pypi
+mistune                   0.7.4            py36h4874169_0  
+mkl                       2018.0.0             h36b65af_4  
+mkl-service               1.1.2            py36h57e144c_4  
+mmh3                      2.5.1                    pypi_0    pypi
+mock                      3.0.5                    py36_0  
+mpmath                    0.19             py36he326802_2  
+msgpack-python            0.4.8            py36h58b1e9d_0  
+multidict                 4.5.2                    pypi_0    pypi
+multipledispatch          0.4.9            py36he44c36e_0  
+navigator-updater         0.1.0            py36h8a7b86b_0  
+nbconvert                 5.3.1            py36h8dc0fde_0  
+nbformat                  4.4.0            py36h3a5bc1b_0  
+netifaces                 0.10.9                   pypi_0    pypi
+networkx                  1.11             py36hdf4b0f5_0  
+ninja                     1.9.0.post1              pypi_0    pypi
+nltk                      3.2.4            py36hd0e0a39_0  
+nose                      1.3.7            py36h1c3779e_2  
+notebook                  5.0.0            py36h27f7975_1  
+numba                     0.45.0           py36hf9181ef_0  
+numexpr                   2.6.2            py36h7ca04dc_1  
+numpy                     1.14.2                   pypi_0    pypi
+numpydoc                  0.7.0            py36ha25429e_0  
+oauth2client              4.1.3                    pypi_0    pypi
+odo                       0.5.1            py36h7560279_0  
+olefile                   0.44             py36h0a7bdd2_0  
+opencv                    3.3.1            py36h20b85fd_1  
+opencv-python             3.4.5.20                 pypi_0    pypi
+openpyxl                  2.4.8            py36hf3b77f6_1  
+openssl                   1.1.1c               hfa6e2cd_0    conda-forge
+packaging                 16.8             py36ha0986f6_1  
+pandas                    0.20.3           py36hce827b7_2  
+pandoc                    1.19.2.1             hb2460c7_1  
+pandocfilters             1.4.2            py36h3ef6317_1  
+partd                     0.3.8            py36hc8e763b_0  
+path.py                   10.3.1           py36h3dd8b46_0  
+pathlib2                  2.3.0            py36h7bfb78b_0  
+patsy                     0.4.1            py36h42cefec_0  
+pep8                      1.7.0            py36h0f3d67a_0  
+pickleshare               0.7.4            py36h9de030f_0  
+pillow                    4.0.0                    pypi_0    pypi
+pip                       18.1                     pypi_0    pypi
+pkginfo                   1.4.1            py36hb0f9cfa_1  
+ply                       3.10             py36h1211beb_0  
+progress                  1.3              py36hbeca8d3_0  
+progressbar               2.5                      pypi_0    pypi
+prompt_toolkit            1.0.15           py36h60b8f86_0  
+protobuf                  3.6.1                    pypi_0    pypi
+psutil                    5.2.2            py36he84b5ac_0  
+py                        1.4.34           py36ha4aca3a_1  
+pyasn1                    0.4.2                    pypi_0    pypi
+pyasn1-modules            0.2.1                    pypi_0    pypi
+pybind11                  2.2.3                    pypi_0    pypi
+pycocotools               2.0                      pypi_0    pypi
+pycodestyle               2.4.0                    pypi_0    pypi
+pycosat                   0.6.3            py36h413d8a4_0  
+pycparser                 2.18             py36hd053e01_1  
+pycrypto                  2.6.1            py36he68e6e2_1  
+pycurl                    7.43.0.2         py36h7a1dbc1_0  
+pyflakes                  1.5.0            py36h56100d8_1  
+pygame                    1.9.4                    pypi_0    pypi
+pyglet                    1.3.2                    pypi_0    pypi
+pygments                  2.2.0            py36hb010967_0  
+pylint                    1.7.2            py36h091ff97_0  
+pymongo                   3.4.0                    py36_0    https://repo.continuum.io/pkgs/free
+pymysql                   0.8.0                    pypi_0    pypi
+pyodbc                    4.0.17           py36h0006bc2_0  
+pyopenssl                 17.2.0           py36h15ca2fc_0  
+pyparsing                 2.2.0            py36h785a196_1  
+pyqt                      5.9.2            py36h6538335_2  
+pyreadline                2.1                   py36_1000    conda-forge
+pysocks                   1.6.7            py36h698d350_1  
+pytables                  3.5.1            py36hb9ab341_1    conda-forge
+pytest                    3.2.1            py36h753b05e_1  
+python                    3.6.2               h6679aeb_11  
+python-dateutil           2.6.1            py36h509ddcb_1  
+python-engineio           2.0.1            py36hddc9b2b_0  
+python-libarchive-c       2.8                     py36_10  
+python-socketio           1.8.3            py36hc8261fa_0  
+python2                   1.2                      pypi_0    pypi
+pytorch                   1.1.0           py3.6_cuda100_cudnn7_1    pytorch
+pytorch-pretrained-bert   0.6.2                    pypi_0    pypi
+pytube                    9.2.2                    pypi_0    pypi
+pytz                      2017.2           py36h05d413f_1  
+pywavelets                0.5.2            py36hc649158_0  
+pywin32                   221              py36h9c10281_0  
+pyyaml                    3.12             py36h1d1928f_1  
+pyzbar                    0.1.8                    pypi_0    pypi
+pyzmq                     16.0.2           py36h38c27d9_2  
+qt                        5.9.7            vc14h73c81de_0  
+qtawesome                 0.4.4            py36h5aa48f6_0  
+qtconsole                 4.3.1            py36h99a29a9_0  
+qtpy                      1.3.1            py36hb8717c5_0  
+regex                     2019.06.08               pypi_0    pypi
+requests                  2.18.4           py36h4371aae_1  
+roi-align                 0.0.1                    pypi_0    pypi
+rope                      0.10.5           py36hcaf5641_0  
+rsa                       3.4.2                    pypi_0    pypi
+ruamel_yaml               0.11.14          py36h9b16331_2  
+s3transfer                0.2.0                    pypi_0    pypi
+scikit-image              0.14.2           py36h6538335_0    conda-forge
+scikit-learn              0.19.0           py36h294a771_2  
+scipy                     1.0.0            py36h1260518_0  
+seaborn                   0.9.0                    py36_0  
+selectivesearch           0.4                      pypi_0    pypi
+selenium                  3.141.0                  pypi_0    pypi
+setuptools                39.0.1                   pypi_0    pypi
+shapely                   1.6.4           py36h8921fb9_1004    conda-forge
+simplegeneric             0.8.1            py36heab741f_0  
+singledispatch            3.4.0.3          py36h17d0c80_0  
+sip                       4.19.8           py36h6538335_0  
+six                       1.11.0                   pypi_0    pypi
+smart-open                1.8.0                    pypi_0    pypi
+snowballstemmer           1.2.1            py36h763602f_0  
+sortedcollections         0.5.3            py36hbefa0ab_0  
+sortedcontainers          1.5.7            py36ha90ac20_0  
+sphinx                    1.6.3            py36h9bb690b_0  
+sphinxcontrib             1.0              py36hbbac3d2_1  
+sphinxcontrib-websupport  1.0.1            py36hb5e5916_1  
+spyder                    3.2.3            py36h132a2c8_0  
+sqlalchemy                1.1.13           py36h5948d12_0  
+sqlite                    3.25.3               he774522_0  
+statsmodels               0.8.0            py36h6189b4c_0  
+sympy                     1.1.1            py36h96708e0_0  
+tblib                     1.3.2            py36h30f5020_0  
+tensor2tensor             1.11.0                   pypi_0    pypi
+tensorboard               1.13.1           py36h33f27b4_0  
+tensorboardx              1.7                      pypi_0    pypi
+tensorflow                1.13.1          gpu_py36h9006a92_0  
+tensorflow-base           1.13.1          gpu_py36h871c8ca_0  
+tensorflow-estimator      1.13.0                     py_0  
+tensorflow-gpu            1.13.1               h0d30ee6_0  
+tensorflow-metadata       0.9.0                    pypi_0    pypi
+tensorflow-probability    0.5.0                    pypi_0    pypi
+termcolor                 1.1.0                    pypi_0    pypi
+testpath                  0.3.1            py36h2698cfe_0  
+tfds-nightly              0.0.1.dev201812010014          pypi_0    pypi
+tk                        8.6.8                hfa6e2cd_0  
+toolz                     0.8.2            py36he152a52_0  
+torch                     1.0.1                    pypi_0    pypi
+torchfile                 0.1.0                    pypi_0    pypi
+torchvision               0.2.2.post3              pypi_0    pypi
+tornado                   4.5.2            py36h57f6048_0  
+tqdm                      4.19.8                     py_0    conda-forge
+traitlets                 4.3.2            py36h096827d_0  
+typing                    3.6.2            py36hb035bda_0  
+typing-extensions         3.7.4                    pypi_0    pypi
+tzlocal                   1.5.1                    pypi_0    pypi
+unicodecsv                0.14.1           py36h6450c06_0  
+uritemplate               3.0.0                    pypi_0    pypi
+urllib3                   1.22             py36h276f60a_0  
+vc                        14.1                 h0510ff6_4  
+vidstab                   1.5.6                    pypi_0    pypi
+visdom                    0.1.8.8                  pypi_0    pypi
+vs2015_runtime            14.15.26706          h3a45250_0  
+wcwidth                   0.1.7            py36h3d5aa90_0  
+webencodings              0.5.1            py36h67c50ae_1  
+websocket-client          0.56.0                   pypi_0    pypi
+werkzeug                  0.14.1                   pypi_0    pypi
+wget                      3.2                      pypi_0    pypi
+wheel                     0.30.0                   pypi_0    pypi
+widgetsnbextension        3.0.2            py36h364476f_1  
+win_inet_pton             1.0.1            py36he67d7fd_1  
+win_unicode_console       0.5              py36hcdbd4b5_0  
+wincertstore              0.2              py36h7fe50ca_0  
+wrapt                     1.10.11          py36he5f5981_0  
+xlrd                      1.1.0            py36h1cb58dc_1  
+xlsxwriter                0.9.8            py36hdf8fb07_0  
+xlwings                   0.11.4           py36hd3cf94d_0  
+xlwt                      1.3.0            py36h1a4751e_0  
+xz                        5.2.4                h2fa13f4_4  
+yacs                      0.1.6                    pypi_0    pypi
+yaml                      0.1.7            vc14hb31d195_1  [vc14]
+yarl                      1.3.0                    pypi_0    pypi
+zict                      0.1.2            py36hbda90c0_0  
+zlib                      1.2.11                   vc14_0  [vc14]  conda-forge
+zstd                      1.3.7                h508b16e_0  
