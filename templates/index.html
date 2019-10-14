@@ -284,6 +284,7 @@
       </div>
     </div>
 
+    <script type="text/javascript" charset="utf-8" src="smoother.js"></script>
     <script
       id="objDetect"
       src="objDetect.js"
@@ -296,7 +297,7 @@
       // CODELAB: Register service worker.
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          window.myItemList = ["LG-praL", "piky-biky"]; // 내 화장품 리스트
+          window.myItemList = ["LG-praL", "ISOI-인텐시브 에너자이징크림"]; // 내 화장품 리스트
           // for material css init
           const myTabs = document.querySelector("#my-tabs");
           //-------------- for auto faceRecogBtn start ---------------
@@ -361,11 +362,12 @@
         let collectionEl = document.querySelector('#my-collection');
         let collectionHTML = '';
         for(let label of myItemList){
+          let label_orig = label.replace(/__/g, ' ');
           let item = `
             <li class="collection-item avatar">
-              <img src="images_ext/${label}/${label}_1.jpg" alt="" class="circle">
-              <span class="title">${label.split('-')[0]}</span>
-              <p>${label.split('-')[1]}<br>등록일: 2019-10-04</p>
+              <img src="images_ext/${label_orig}/${label_orig}_1.jpg" alt="" class="circle">
+              <span class="title">${label_orig.split('-')[0]}</span>
+              <p>${label_orig.split('-')[1]}<br>등록일: 2019-10-04</p>
               <a href="#modal1-${label}" class="secondary-content modal-trigger"><i class="material-icons">grade</i></a>
             </li>
 
@@ -378,8 +380,8 @@
                   <div class="col s10 offset-s1 m8 offset-m2">
                     <div class="card">
                       <div class="card-image">
-                        <img src="images_ext/${label}/${label}_1.jpg">
-                        <span class="card-title">${label}</span>
+                        <img src="images_ext/${label_orig}/${label_orig}_1.jpg">
+                        <span class="card-title">${label_orig}</span>
                       </div>
                       <div class="card-content">
                         <p>울릉도 해양 심층수의 수분 밸런스와 천연 효소 각질 제거로 더욱 순하게 케어함</p>
