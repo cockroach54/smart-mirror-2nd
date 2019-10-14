@@ -2,7 +2,7 @@ from preprocess import *
 
 if __name__ == '__main__':
     itemName = "bottle"
-    imgRootPath = ".\\images"
+    imgRootPath = "./images"
     extractor = ImageExtractor(imgRootPath, itemName)
     # 비디오 전처리
     extractor.preprocessVideo(SHOW_IMAGE = False)

@@ -250,7 +250,7 @@ class ImageExtractor:
         for i in tqdm(range(self.videoLength)):
             ret, frame = self.cap.read()
             if ret:
-        # for fn in tqdm(glob(self.imgDirPath+'\\*.jpg')):
+        # for fn in tqdm(glob(self.imgDirPath+'/*.jpg')):
         #     frame = cv2.imread(fn)
         #     if(frame.shape[0]>0):
 
@@ -419,7 +419,7 @@ class ImageExtractor:
         for i in tqdm(range(self.videoLength)):
             ret, frame = self.cap.read()
             if ret:
-        # for fn in tqdm(glob(self.imgDirPath+'\\*.jpg')):
+        # for fn in tqdm(glob(self.imgDirPath+'/*.jpg')):
         #     frame = cv2.imread(fn)
         #     if(frame.shape[0]>0):
 

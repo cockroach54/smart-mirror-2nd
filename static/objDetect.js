@@ -119,6 +119,7 @@ function inferPost(){
     setForDetect('api/infer').then(d => {
             //*********************** */
             console.log(d)
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             for (bbox of d.bboxes){
                 bbox_coord = bbox[0].map(x=> x*ratio);
                 drawCtx.fillText(d.labels[bbox[1]]+`(${bbox[2].toFixed(3)})`, bbox_coord[0]+3, bbox_coord[1]-10);
@@ -391,16 +392,7 @@ function uploadVideo(){
     // 디비에 등록
     document.querySelector('#pred').innerText='EXTRACTING...';
     document.querySelector('#spinner').style.display='block';
-    registerItem().then((res) => {
-        if (res.status === 200 || res.status === 201) { // 성공을 알리는 HTTP 상태 코드면
-            return res.json()
-        } else { // 실패를 알리는 HTTP 상태 코드면
-            console.error(res.statusText);
-        }
-    }).then(d => {
-        console.log(d)
-        return fetch('/api/upload', myInit);
-    }).then((res) => {
+    fetch('/api/upload', myInit).then((res) => {
         if (res.status === 200 || res.status === 201) { // 성공을 알리는 HTTP 상태 코드면
             return res.json()
         } else { // 실패를 알리는 HTTP 상태 코드면

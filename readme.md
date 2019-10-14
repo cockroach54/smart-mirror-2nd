@@ -25,3 +25,6 @@
   python server.py --d F
 ```
 
+- NOTE
+  - GPU MUST REQUIRD!!
+

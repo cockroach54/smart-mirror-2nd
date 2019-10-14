@@ -40,7 +40,7 @@ def non_max_sup_one_class(bboxes, threshold=0.2, descending=False):
             if iou_res>threshold: keeps[j] = False
     return bboxes[keeps]
 
-edge_model = ".\\model.yml.gz"
+edge_model = "./model.yml.gz"
 edge_detection = cv2.ximgproc.createStructuredEdgeDetection(edge_model)
 
 def rpn(im_opencv, num_boxs, scale=1):

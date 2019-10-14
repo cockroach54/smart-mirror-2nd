@@ -300,7 +300,7 @@ class OracleModel(nn.Module):
         return cos_dist.cpu()        
 
     def inference_file(self, imgPath):              
-        # imgPath = ".\\server\\oracle_proj\\predict.jpg"
+        # imgPath = "./server/oracle_proj/predict.jpg"
         frame = cv2.imread(os.path.join(imgPath), cv2.IMREAD_COLOR)
         return self.inference_tensor(frame)
 
@@ -337,4 +337,4 @@ class OracleModel(nn.Module):
         ax = sns.scatterplot(x=0, y=1, hue='name', data=self.df, palette="Set1", legend="full", s=30)
         ax2 = sns.scatterplot(x=0, y=1, hue='name', data=self.centers, palette="Set1", s=150, legend=None, edgecolor='black')
         plt.scatter(_outputs[:,0], _outputs[:,1], marker='x', c='black', s=120)
-        plt.savefig(os.path.join('.\\static', 'plot.jpg'))
+        plt.savefig(os.path.join('./static', 'plot.jpg'))
