@@ -43,6 +43,7 @@
   - python-opencv, pytorch, flask...
     - requirements.txt에 정리
   - GPU CUDA
+  - ffmpeg
 
 - Derectories
 ```txt

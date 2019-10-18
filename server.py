@@ -126,19 +126,6 @@ def faceRecognition(req):
         print('[face]', faces)
     return faces
 
-    db_class = dbModule.Database()
- 
-    sql      = "UPDATE users SET name='%s' WHERE name='park'" % ('ppp')
-    db_class.execute(sql)   
-    db_class.commit()
-    sql      = "SELECT id, name FROM users"
-    row      = db_class.executeAll(sql)
- 
-    return render_template('test.html',
-                            result=None,
-                            resultData=None,
-                            resultUPDATE=row[0])
-
 # ------------------------flask app------------------------------
 
 app = Flask(__name__, static_url_path='',
@@ -155,6 +142,7 @@ def after_request(response):
 
 """home page"""
 @app.route('/')
+@app.route('/index.html')
 def index():
     return render_template('index.html')
 
