@@ -38,6 +38,7 @@ navigator.mediaDevices.getUserMedia(constraints)
 
 // mobile setup
 let mirror = true;
+let r_ww=0.35; r_hh=0.6; r_xx=0.05; r_yy=0.35; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
 let reg_phone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|BB|PlayBook|IEMobile|Windows Phone|Kindle|Silk|Opera Mini/i;
 if (reg_phone.test(navigator.userAgent)) {
     rpnNumX.value = 1;
@@ -45,6 +46,7 @@ if (reg_phone.test(navigator.userAgent)) {
     rpnScaleX.value = 0.6;
     rpnScaleY.value = 0.45;
     threshold.value = 0.88;
+    r_ww=0.6; r_hh=0.45; r_xx=0.2; r_yy=0.4; r_xx_inverted=1-r_ww-r_xx;
     // Take the user to a different screen here.
     // 모바일 후면 카메라 미러효과 없애기
     if(constraints.video.facingMode==="environment"){
@@ -59,6 +61,7 @@ const sourceVideo = s.getAttribute("data-source");  //the source video to use
 const uploadWidth = s.getAttribute("data-uploadWidth") || 640; //the width of the upload file
 //Video element selector
 v = document.getElementById(sourceVideo);
+let ww, hh, xx, yy;
 
 //for starting events
 let isPlaying = false,
@@ -77,6 +80,17 @@ videoWrapper.appendChild(drawCanvas);
 let drawCtx = drawCanvas.getContext("2d");
 drawCtx.fillStyle = "#ffffff";
 drawCtx.strokeStyle = "#ffff00";
+
+
+function clearNdraw(){
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    // 화면에 항상 고정시킬 그림 여기에
+    if(radioEl[0].checked && currTabIdx===0){
+        drawCtx.strokeStyle = "rgba(255,0,0,0.5)";  
+        drawCtx.strokeRect(xx,yy,ww,hh);
+        drawCtx.strokeStyle = "rgba(0,255,0,0.5)";
+    }
+}
 
 // -------------------------  detection api -----------------------------
 function setForDetect(url){
@@ -119,7 +133,7 @@ function inferPost(){
     setForDetect('api/infer').then(d => {
             //*********************** */
             console.log(d)
-            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            clearNdraw();
             for (bbox of d.bboxes){
                 bbox_coord = bbox[0].map(x=> x*ratio);
                 drawCtx.fillText(d.labels[bbox[1]]+`(${bbox[2].toFixed(3)})`, bbox_coord[0]+3, bbox_coord[1]-10);
@@ -158,10 +172,21 @@ function detectPost(){
         let fps = 1/duration*1000;
         fpsEl.innerText = fps.toFixed(2);
 
+        // if(d.confused){
+        //     var toastHTML = `
+        //     <span>헷갈리네요...</span>
+        //     <button class="btn-flat toast-action" onclick="M.toast({html:'나만의 화장대에 등록 완료!', classes: 'rounded my-toast'})">OK</button>
+        //     `;
+        //     M.toast({
+        //         html: toastHTML,
+        //         classes: 'rounded my-toast',
+        //         displayLength: 6000
+        //     });
+        // }
         if(radioEl[0].checked){
             //***********box render************ */
             // console.log(d);
-            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            clearNdraw();
             for (bbox of d.bboxes){
                 bbox_coord = bbox[0].map(x=> x = x*ratio);
                 drawCtx.fillText(d.labels[bbox[1]]+`(${bbox[2].toFixed(3)})`, bbox_coord[0]+3, bbox_coord[1]-12);
@@ -175,7 +200,7 @@ function detectPost(){
         //********************************* */      
 
         if(isDetecting) detectPost();
-        else drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        else clearNdraw();
     }) // 텍스트 출력
     .catch(err => console.error(err));
 }
@@ -230,7 +255,7 @@ function FaceRecogPost(){
 
         if(radioEl[0].checked){
             //***********box render************ */
-            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            clearNdraw();
             drawCtx.strokeStyle = "rgba(0,0,255,0.5)";
             for (bbox of d.bboxes){
                 bbox_coord = bbox.map(x=> x = x*ratio);
@@ -268,7 +293,7 @@ function FaceRecogPost(){
         }
         //********************** */
         if(isFaceRecognating) FaceRecogPost();
-        else drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        else clearNdraw();
     }) // 텍스트 출력
     .catch(err => console.error(err));
 }
@@ -300,6 +325,12 @@ function startObjectDetection() {
     document.querySelector('#screenInfo').innerText += `\n width: ${drawCanvas.width}, height: ${drawCanvas.height}`;
     Smoother.sleep(1500).then(()=>{
         window.smoother = new Smoother(1200);
+        // record rect setting
+        ww = v.videoWidth*r_ww;
+        hh = v.videoHeight*r_hh;
+        xx = v.videoWidth*r_xx;
+        yy = v.videoHeight*r_yy;
+        clearNdraw();
     });
 }
 //Starting events
@@ -383,7 +414,8 @@ function uploadVideo(){
     const blob = new Blob(recordedBlobs, {type: 'video/webm'});
     let formdata = new FormData();
     formdata.append("myVideo", blob, _itemName+'.mp4');
-    formdata.append("name", _itemName)
+    formdata.append("name", _itemName);
+    formdata.append("cropScale", [r_xx_inverted, r_yy, r_ww, r_hh]);
     let myInit = {
         method: 'POST',
         body: formdata

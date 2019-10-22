@@ -7,15 +7,11 @@ import subprocess
 import os, shutil, platform
 import pandas as pd
 from glob import glob
-from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 from time import sleep
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from collections import Counter
 
 class ImageExtractor:
     def __init__(self, rootPath, filename):
-        self.data = []
         self.os = platform.system() # Windows, Linux
         self.cap = None
         self.errorArr = []
@@ -24,8 +20,6 @@ class ImageExtractor:
         self.imageWidth = 224 # 추출할 이미지 너비
         self.imageHeight = 224 # 추출할 이미지 높이 
         self.CONSTANT_RATIO = False # 추출할 이미지 리사이징할때 ratio warp할지
-        self.n_cluster = 5 # 히스토그램 클러스터 개수
-        self.candidateImages = []
         self.itemName = os.path.splitext(filename)[0]
         self.rootPath = rootPath
         self.videoPath = os.path.join(self.rootPath, "videos", filename)
@@ -35,11 +29,13 @@ class ImageExtractor:
         self.imgExtDirPath = os.path.join(self.rootPath, "images_ext", self.itemName)
         
         assert bool(self.itemName), "itemName should not be null value."
+        # self.get_image_info()
+        self.get_video_info(self.videoPath)
 
     # get video length for metadata crashed file
-    def get_video_length(self, infilename):
+    def get_video_length(self):
         cnt=0
-        self.cap = cv2.VideoCapture(infilename)
+        self.cap = cv2.VideoCapture(self.videoResizedPath)
         while(True):
             ret, frame = self.cap.read()
             if ret:
@@ -48,6 +44,13 @@ class ImageExtractor:
         self.videoLength = cnt
         self.cap.release()
         return cnt
+
+    # get meta infomations 
+    def get_image_info(self):
+        file_list = os.listdir(self.imgDirPath)
+        self.videoLength = file_list
+        self.videoHeight, self.videoWidth, self.fps = cv2.imread(os.path.join(self.imgDirPath, file_list[0])).shape
+        return
 
     # 비디오 정보 가져오기(비디오용)
     def get_video_info(self, infilename):
@@ -60,16 +63,11 @@ class ImageExtractor:
         self.videoWidth = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.videoHeight = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.adjCenter = [self.videoWidth/2, self.videoHeight/2] # 처음엔 중심부터 탐색
         self.cap.release()
         return
 
     # 비디오 리사이징(비디오용)
-    def resizeVideo(self, mode="resize", crop_scsle_ratio=[0.2,0.2,0.6,0.6]):
-        """
-        @params mode: 'resize', 'crop'
-        @params crop_scsle_ratio: [x,y,h,w] required only for 'crop' mode
-        """
+    def resizeVideo(self):
         # get original video meta infomation
         self.get_video_info(self.videoPath)
 
@@ -77,33 +75,24 @@ class ImageExtractor:
         if not os.path.isdir(self.videoResizedDirPath): os.makedirs(self.videoResizedDirPath)
 
         # make resized video
+        # 'ffmpeg -i "video/190703/AGE20_S-essence cover tx.mp4" -vf scale=-1:960 video/resized/out.mp4'
         if os.path.isfile(self.videoResizedPath):
             print('[Notice]:', self.videoResizedPath, 'aleady exist. remove it!')     
             os.remove(self.videoResizedPath)       
 
         # 비디오 스케일 종횡비 결정
-        if mode=='crop':
-            r_xx, r_yy, r_ww, r_hh = crop_scsle_ratio
-            ww=int(self.videoWidth*r_ww)
-            hh=int(self.videoHeight*r_hh)
-            xx=int(self.videoWidth*r_xx)
-            yy=int(self.videoHeight*r_yy)
-            crop = "crop=%d:%d:%d:%d,fps=30"%(ww,hh,xx,yy) # w,h,x,y
-            command = ['ffmpeg', '-i', self.videoPath, '-filter:v', crop, self.videoResizedPath]
-        elif mode=='resize':
-            # 'ffmpeg -i "video/190703/AGE20_S-essence cover tx.mp4" -vf scale=-1:960 video/resized/out.mp4'        
-            if self.videoWidth>1000 or self.videoHeight>1000:
-                w = int(self.videoWidth/2)
-                h = int(self.videoHeight/2)
-                # scale = "scale=-1:%d"%(h)
-                scale = "scale=iw/2:-1"
-                # scale = "scale=%d:%d"%(w,h) # 이거 하면 원본 oritation 정보 잃어버림
-                command = ['ffmpeg', '-i', self.videoPath, '-vf', scale, self.videoResizedPath]
-            else: # just copy and rename video file
-                if self.os == 'Windows':
-                    command = ['cmd', '\/c', 'copy', self.videoPath, self.videoResizedPath]
-                elif self.os == 'Linuix':
-                    command = ['cp', self.videoPath, self.videoResizedPath]
+        if self.videoWidth>1000 or self.videoHeight>1000:
+            w = int(self.videoWidth/2)
+            h = int(self.videoHeight/2)
+            # scale = "scale=-1:%d"%(h)
+            scale = "scale=iw/2:-1"
+            # scale = "scale=%d:%d"%(w,h) # 이거 하면 원본 oritation 정보 잃어버림
+            command = ['ffmpeg', '-i', self.videoPath, '-vf', scale, self.videoResizedPath]
+        else: # just copy and rename video file
+            if self.os == 'Windows':
+                command = ['cmd', '\/c', 'copy', self.videoPath, self.videoResizedPath]
+            elif self.os == 'Linuix':
+                command = ['cp', self.videoPath, self.videoResizedPath]
 
         print('[Command]: \n', command)
         # 커맨드 실행    
@@ -119,10 +108,8 @@ class ImageExtractor:
 
     # 카메라 중심에서의 거리계산 
     def calcDist(self, d):
-#         cx = self.videoWidth/2
-#         cy = self.videoHeight/2
-        cx = self.adjCenter[0]
-        cy = self.adjCenter[1]
+        cx = self.videoWidth/2
+        cy = self.videoHeight/2
         x=d[0]; y=d[1]; width=d[2]; height=d[3]
         x_c = x+width/2
         y_c = y+height/2
@@ -134,7 +121,7 @@ class ImageExtractor:
         # dist threshold 기준 계산
         distArr = np.array([e[-1] for e in rectArr])
         distDiffArr = distArr[1:] - distArr[:-1]
-        if len(rectArr)>2: threshold = statistics.median(distDiffArr)*10 # 10은 사후 검토값이므로 바뀔 수 있음
+        if len(rectArr)>2: threshold = statistics.median(distDiffArr)*10 # 20은 사후 검토값이므로 바뀔 수 있음
         else: threshold = math.inf
 
         finRec = (int(self.videoWidth/2), int(self.videoHeight/2) ,0,0)
@@ -181,108 +168,79 @@ class ImageExtractor:
     def calcArea(self, rect):
         return (rect[2]-rect[0])*(rect[3]-rect[1])
 
-    # 검출영역 히스토그램 저장전 trim 및 ratio 후처리
-    def trimImage(self, frame, detectedRect_orig):
+    # 검출영역 저장
+    def saveImage(self, frame, detectedRect_orig, videoname, idx):
         width, height = self.imageWidth, self.imageHeight
         ratio = height/width
         detectedRect= list(detectedRect_orig)
 
         detectedRect_width = detectedRect[2]-detectedRect[0]
         detectedRect_height = detectedRect[3]-detectedRect[1]
-        
-        # trim image
-        img_trim = frame[detectedRect[1]:detectedRect[3], detectedRect[0]:detectedRect[2]] # y1, y2, x1, x2   
-        # image resizing
-        try:
-            if self.CONSTANT_RATIO: img_trim = cv2.resize(img_trim, (width, height), interpolation=cv2.INTER_CUBIC)
 
-            if(len(self.candidateImages)==0): self.candidateImages = np.stack([img_trim])
-            else: self.candidateImages = np.concatenate([self.candidateImages, [img_trim]]) # 히스토그램 이상값 검출용 저장
-        except: print('[Trim Error]:', img_trim.shape)
-            
-        return detectedRect
+        # reshape image
+        # 화면 넘어간 ratio 반대쪽 확장으로 맞춰주기 사용안함
+        if (False):
+            ratio_detected = detectedRect_height/detectedRect_width
+            if(ratio>ratio_detected): # 가로가 긴 경우
+                upMargin = math.ceil((detectedRect_width - detectedRect_height)/2)
+                downMargin = math.floor((detectedRect_width - detectedRect_height)/2)
+                detectedRect[1] = detectedRect[1] - upMargin
+                detectedRect[3] = detectedRect[3] + downMargin
+            else: # 세로가 긴경우
+                leftMargin = math.ceil((detectedRect_height - detectedRect_width)/2)
+                rightMargin = math.floor((detectedRect_height - detectedRect_width)/2)
+                detectedRect[0] = detectedRect[0] - leftMargin
+                detectedRect[2] = detectedRect[2] + rightMargin
 
-    def _fit_KMeans(self, data, k, SHOW_PLOT=False):
-        model = KMeans(n_clusters=k, init="k-means++", max_iter=100, random_state=8).fit(data)
-        centroids = model.cluster_centers_
-        
-        if(SHOW_PLOT):
-            pca = PCA(n_components=2)
-            transformed = pca.fit_transform(data)
-            transformed_centroids = pca.fit_transform(centroids)
+            # 검출영역의 width가 프레임 밖으로 넘어가는 경우 보정
+            if(detectedRect[0]<0):
+                detectedRect[2] = detectedRect[2] - detectedRect[0]
+                detectedRect[0] = 0
+            elif(detectedRect[2]>self.videoWidth):
+                detectedRect[0] = detectedRect[0] - (self.videoWidth-detectedRect[2])
+                detectedRect[2] = self.videoWidth
+            # 검출영역의 height가 프레임 밖으로 넘어가는 경우 보정    
+            if(detectedRect[1]<0):
+                detectedRect[3] = detectedRect[3] - detectedRect[1]
+                detectedRect[1] = 0
+            elif(detectedRect[3]>self.videoHeight):
+                detectedRect[1] = detectedRect[1] - (self.videoHeight-detectedRect[3])
+                detectedRect[3] = self.videoHeight    
 
-            plt.figure(figsize=(8, 8))
-            plt.scatter(transformed[:,0], transformed[:,1], marker='o', c=model.labels_)
-            plt.scatter(transformed_centroids[:,0], transformed_centroids[:,1], marker='x', c='r')
-            for i in range(len(data)): plt.annotate(i, (transformed[i,0], transformed[i,1]))
-            for i in range(len(transformed_centroids)):
-                plt.annotate(i, (transformed_centroids[i,0], transformed_centroids[i,1]))
+            # 마지막으로 화면 넘어간 영역 정리
+            if(detectedRect[0]<0): detectedRect[0] = 0
+            if(detectedRect[2]>self.videoWidth): detectedRect[2] = self.videoWidth
+            if(detectedRect[1]<0): detectedRect[1] = 0
+            if(detectedRect[3]>self.videoHeight): detectedRect[3] = self.videoHeight            
 
-            plt.grid(False)
-            plt.title("PCA&K-Means: k={}, iteration={}, score={:5.2f}".format(k, k*10, model.score(data)))
-            plt.show()
-            
-        return model
-
-    def saveImage(self):
-        #  image histogram 계산
-        hists_r = list(map(lambda x: cv2.calcHist([x], [0], mask=None, histSize=[256], ranges=[0,256]), self.candidateImages))
-        hists_g = list(map(lambda x: cv2.calcHist([x], [1], mask=None, histSize=[256], ranges=[0,256]), self.candidateImages))
-        hists_b = list(map(lambda x: cv2.calcHist([x], [2], mask=None, histSize=[256], ranges=[0,256]), self.candidateImages))
-        hists_r = np.array(hists_r).squeeze()
-        hists_g = np.array(hists_g).squeeze()
-        hists_b = np.array(hists_b).squeeze()    
-        self.hists = np.concatenate([hists_r, hists_g, hists_b], axis=1) # n_imgs X 256*3
- 
-        if(len(self.hists)<self.n_cluster):
-            print('[kmeans]: n_images -', len(self.hists), ', n_clusters -', self.n_cluster)
-            print('[kmeans]: set k=', len(self.hists))
-            kmeans = self._fit_KMeans(self.hists, len(self.hists), SHOW_PLOT=False)
-        else: kmeans = self._fit_KMeans(self.hists, self.n_cluster, SHOW_PLOT=False)
-        cluster_labels = Counter(kmeans.labels_) # 클러스터별 이미지 개수
-        cluster_dists = []
-        for i in range(len(kmeans.cluster_centers_)):
-            dist = np.linalg.norm((kmeans.cluster_centers_[i]-kmeans.cluster_centers_), axis=1)
-            dist = dist/math.sqrt(cluster_labels[i]) # 개수 많은 것은 주요 클러스터이므로 보정
-            cluster_dists.append(dist)
-        cluster_dists = np.array(cluster_dists)
-        # 나머지 클러스터들과의 가까운 것(특이값 제외) 순으로 정렬
-        # 최대 3개의 클러스터 사용
-        major_cluster = cluster_dists.sum(axis=1).argsort()[:3]
-
-        self.filtered_idx = [idx in major_cluster for idx in kmeans.labels_ ]
+            # 임시 에러 로그 확인용 (정사각형 ratio나오지 않는것 확인)
+            # detectedRect_width = detectedRect[2]-detectedRect[0]
+            # detectedRect_height = detectedRect[3]-detectedRect[1]
+            # ratio_detected = detectedRect_height/detectedRect_width
+            # if(ratio_detected != 1): print('*****ratio limit********', detectedRect, ratio_detected)
 
         imgDirOrig = self.imgExtDirPath
         if not os.path.isdir(imgDirOrig): os.makedirs(imgDirOrig)
+        imgPathOrig = os.path.join(imgDirOrig, str(videoname)+'_'+str(idx)+'.jpg')    
 
-        imgDirTemp = os.path.join(self.rootPath, "temp")
-        if not os.path.isdir(imgDirTemp): os.makedirs(imgDirTemp)
+        imgDir = os.path.join(self.rootPath, "temp")
+        if not os.path.isdir(imgDir): os.makedirs(imgDir)
+        imgPath = os.path.join(imgDir, "temp"+'_'+str(idx)+'.jpg')
     
         try:
-            for idx, img_trim in enumerate(self.candidateImages[self.filtered_idx]):
-                imgPathOrig = os.path.join(imgDirOrig, str(self.itemName)+'_'+str(idx)+'.jpg')    
-                imgPath = os.path.join(imgDirTemp, "temp"+'_'+str(idx)+'.jpg')
-                cv2.imwrite(imgPath, img_trim) # 이미지 저장
-                os.rename(imgPath, imgPathOrig) #  opencv 한글 패스 저장 안되므로 temp에 만들고 이름 수정 
+            # trim image
+            img_trim = frame[detectedRect[1]:detectedRect[3], detectedRect[0]:detectedRect[2]] # y1, y2, x1, x2   
+            # image resizing
+            if self.CONSTANT_RATIO: img_trim = cv2.resize(img_trim, (width, height), interpolation=cv2.INTER_CUBIC)
+            cv2.imwrite(imgPath, img_trim) # 이미지 저장
+            os.rename(imgPath, imgPathOrig) #  opencv 한글 패스 저장 안되므로 temp에 만들고 이름 수정 
         except:
-            print('[Save Img Error:]', imgPath)
+            print('[Save Img Error:]', detectedRect_orig, detectedRect)
 
-        shutil.rmtree(imgDirTemp)
-        return
-    
-    def weight_array(self, ar, weights):
-        zipped = zip(ar, weights)
-        weighted = []
-        for i in zipped:
-            for j in range(i[1]):
-                weighted.append(i[0])
-        return np.array(weighted)    
+        shutil.rmtree(imgDir)
+        return detectedRect
 
     def preprocessVideo(self, merge_ratio_limit=0.7, SHOW_IMAGE = True):
-        self.get_video_length(self.videoResizedPath)
-        self.get_video_info(self.videoResizedPath)
-        self.cap = cv2.VideoCapture(self.videoResizedPath)
-
         # 옵션 설명 http://layer0.authentise.com/segment-background-using-computer-vision.html
         fgbg = cv2.createBackgroundSubtractorMOG2(varThreshold=100, detectShadows=False)
 
@@ -290,11 +248,16 @@ class ImageExtractor:
         mergedAreas = [] # merged rect 넓이만저장하는 배열
         RectArea = self.videoHeight*self.videoWidth # initiation for put preframeArea to mergeRect 
         mergedRect= (0,0,self.videoWidth,self.videoHeight)
-        self.candidateImages = []
 
+        self.get_video_length()
+        self.cap = cv2.VideoCapture(self.videoResizedPath)
         for i in tqdm(range(self.videoLength)):
             ret, frame = self.cap.read()
             if ret:
+        # for fn in tqdm(glob(self.imgDirPath+'/*.jpg')):
+        #     frame = cv2.imread(fn)
+        #     if(frame.shape[0]>0):
+
                 fgmask = fgbg.apply(frame)     
                 edge = cv2.Canny(fgmask, 0,200) # bgmask에 canny edge detection 적용
                 nlabels, _labels, stats, centroids = cv2.connectedComponentsWithStats(edge)
@@ -318,10 +281,6 @@ class ImageExtractor:
                             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0))
 
                 data = np.array(data)
-#                 self.data.append(data)
-                if(len(data)>0):
-#                     self.adjCenter = np.average(data[:,:2], axis=0, weights=data[:,-1])
-                    self.adjCenter = np.median(self.weight_array(data[:,:2], data[:,-1]), axis=0) # area weighted median이용 해서 머지 시작점 계산
 
                 # 머지된 사각형 그리기
                 mergedRect = self.mergeByDist(data, RectArea, mergedRect, ratio=merge_ratio_limit)
@@ -332,7 +291,7 @@ class ImageExtractor:
                 if(SHOW_IMAGE):
                     cv2.putText(frame, str(len(allData))+' RectArea '+str(RectArea), \
                                 (30,self.videoHeight-30),cv2.FONT_HERSHEY_SIMPLEX, 1, (100,0,225), 3) # 프레임 id, 선별영역 넓이
-                    cv2.circle(frame, (int(self.adjCenter[0]), int(self.adjCenter[1])), 1, (0,0,225), 6) # 중심점 렌더
+                    cv2.circle(frame, (int(self.videoWidth/2), int(self.videoHeight/2)), 1, (0,0,0), 6) # 중심점 렌더
                     cv2.putText(frame, str(len(data)), (30,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,225), 3) # 엣지 컨벡스헐 개수
                     # 영역 각각 그리기
                     cv2.imshow('bgsub', fgmask)
@@ -444,13 +403,14 @@ class ImageExtractor:
         }
         return
 
-    def extractImages(self, interval=5, SHOW_IMAGE = True):
+    def extractImages(self, SHOW_IMAGE = True):
         print('[Extract Images]:', self.itemName)
         idx = 0
         shrink_ratio = 0.5 #  abnormal 관측시 5%씩 증감
         shrink_ratio_s = 0.5
         margin = 0.02 # 검출영역 마진
         cnt = 0 # 저장용 프레임 체크용
+        save_cnt = 0 # 저장용 파일명 인덱스용
         preRect = []
         detectedRect= [0,0,0,0]
 
@@ -463,6 +423,10 @@ class ImageExtractor:
         for i in tqdm(range(self.videoLength)):
             ret, frame = self.cap.read()
             if ret:
+        # for fn in tqdm(glob(self.imgDirPath+'/*.jpg')):
+        #     frame = cv2.imread(fn)
+        #     if(frame.shape[0]>0):
+
                 mergedRect = self.allData[idx]
                 frame_for_save = frame.copy()
                 if bool(preRect):
@@ -508,10 +472,11 @@ class ImageExtractor:
                     else: 
                         cnt+=1
                         # n번째마다 저장
-                        if(cnt%interval==0): 
-                            trimedRect = self.trimImage(frame_for_save, detectedRect)
-                            cv2.putText(frame, 'Candidate image', (40, self.videoHeight), cv2.FONT_HERSHEY_SIMPLEX, 1, (225,0,0), 3)        
-                            cv2.rectangle(frame, (trimedRect[0], trimedRect[1]), (trimedRect[2], trimedRect[3]), (255, 0, 0), 2)        
+                        if(cnt% 5 ==0): 
+                            savedRect = self.saveImage(frame_for_save, detectedRect, self.itemName, save_cnt)
+                            cv2.putText(frame, 'Save image', (40, self.videoHeight), cv2.FONT_HERSHEY_SIMPLEX, 1, (225,0,0), 3)        
+                            cv2.rectangle(frame, (savedRect[0], savedRect[1]), (savedRect[2], savedRect[3]), (255, 0, 0), 2)        
+                            save_cnt += 1                     
 
                 if idx>0: # 첫 프레임 무시
                     preRect = mergedRect          
@@ -520,6 +485,8 @@ class ImageExtractor:
                     cv2.rectangle(frame, (mergedRect[0], mergedRect[1]), (mergedRect[2], mergedRect[3]), (0, 0, 255), 2)
                     cv2.rectangle(frame, (detectedRect[0], detectedRect[1]), (detectedRect[2], detectedRect[3]), (0, 255, 255), 2)
                     cv2.imshow('frame',frame)
+        #         sleep(0.5)
+        #         cv2.imwrite('./img/'+str(self.itemName)+'_'+str(idx)+'.jpg', frame[detectedRect[1]:detectedRect[3], detectedRect[0]:detectedRect[2]]) # 이미지 저장
 
                 k = cv2.waitKey(1) & 0xff 
                 if k == 27: # esc
@@ -529,6 +496,5 @@ class ImageExtractor:
             idx += 1    
 
         if self.cap: self.cap.release()
-        self.saveImage()
         cv2.destroyAllWindows()      
         return  

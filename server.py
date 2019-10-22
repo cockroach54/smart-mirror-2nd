@@ -4,6 +4,7 @@ from PIL import Image
 from flask import Flask, request, Response, render_template
 import sys, json, random, time, argparse
 import numpy as np
+from time import sleep
 import cv2
 from preprocess import *
 from detector import *
@@ -108,7 +109,6 @@ def detect_boxes(req):
         for idx, (box, pred, dist) in enumerate(bboxes_all_nms):        
             pred_label = model.reference_classes[pred]
             res_text = pred_label+"("+str(dist)+")"
-            x, y, w, h = box
             print(idx, ':', res_text, box)
     return bboxes_all_nms
 
@@ -154,19 +154,22 @@ def api_upload():
     f.save("static/videos/"+filename)
 
     itemName = request.form.get('name')
+    crop_scsle_ratio = request.form.get('cropScale')
+    crop_scsle_ratio = list(map(lambda x: float(x), crop_scsle_ratio.split(',')))
+
     rootPath = "static"
     extractor = ImageExtractor(rootPath, filename)
     # 비디오 ratio 결정 
     extractor.CONSTANT_RATIO = True
-    # 비디오 리사이징
-    extractor.resizeVideo()
+    # 비디오 리사이징 - crop 모드
+    extractor.resizeVideo(mode="crop", crop_scsle_ratio=crop_scsle_ratio)
     # 비디오 전처리
-    extractor.preprocessVideo(SHOW_IMAGE = False)
+    print('<<<>>>', extractor.videoHeight, extractor.videoWidth)
+    extractor.preprocessVideo(merge_ratio_limit=0.9, SHOW_IMAGE=False)
     # 통계량 추출 
     extractor.getStatistics(SHOW_PLOT=False)
     # # 결과 이미지 영역 크롭
-    extractor.extractImages(SHOW_IMAGE=False)
-    extractor.cap.release()
+    extractor.extractImages(interval=7, SHOW_IMAGE=False)
     # 비디오 추출시마다 레퍼런스 디비 재생성
     model.makeAllReference_online('static/images_ext')
     return json.dumps({'success': True, 'filename': filename})
@@ -184,10 +187,29 @@ def api_detectweb():
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
     bboxes_all_nms = detect_boxes(req)
 
+    # return json.dumps({
+    #     'success': True,
+    #     'labels': model.reference_classes,
+    #     'bboxes': bboxes_all_nms
+    # }, cls=MyEncoder)    
+
+    if(len(bboxes_all_nms)>0):
+        mask = bboxes_all_nms[:,2]>req['threshold']+0.02
+        bboxes_all_nms = bboxes_all_nms[mask]
+        print(mask)
+        if not np.all(mask):
+            return json.dumps({
+                'success': True,
+                'labels': model.reference_classes,
+                'bboxes': bboxes_all_nms,
+                'confused': True,
+            }, cls=MyEncoder)    
+    
     return json.dumps({
         'success': True,
         'labels': model.reference_classes,
-        'bboxes': bboxes_all_nms
+        'bboxes': bboxes_all_nms,
+        'confused': False,
     }, cls=MyEncoder)    
  
 """image detection api(make plot also)"""

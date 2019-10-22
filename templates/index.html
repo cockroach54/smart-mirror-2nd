@@ -219,7 +219,7 @@
           </div>
 
         </div>
-        <div class="row" style="margin-bottom:0">
+        <div class="row" style="margin-bottom:0; display:none">
           <div class="input-field col s3">
             <input id="rpnNumX" type="number" value="3" step="1"/>
             <label for="rpnNumX">rpnNumX</label>
@@ -419,6 +419,8 @@
         // 모드확인 영역
         const detectModeEl = document.querySelector('#detectMode');
         detectModeEl.innerHTML = 'F';
+        //첫 화면 개끗이히 지우기
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
       }
 
       function handleTest(){

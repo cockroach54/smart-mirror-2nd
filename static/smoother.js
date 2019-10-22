@@ -10,7 +10,7 @@ class Smoother{
           this.duration = Date.now()-startTime; // 서버 다녀오는 시간, ms
           this.labels = d.labels.map(x=>x.replace(/\s/g, '__')); // 스페이스 html 아이디 사용불가 보정
           this.classNum = this.labels.length;
-          this.threshold = 0.6;
+          this.threshold = 0.6; // 큐 평균값 threshold
           this.sequenceNum = Math.round(this.timeWindow/this.duration) || 1; // sequenceNum = 물체 노출시간(timWindow)/duration, ex) 20/10 = 2sec
           this.smoothDataQueue = [];
           this.detctedItemHistory = [];
