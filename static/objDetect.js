@@ -1,5 +1,7 @@
 
 let threshold = document.querySelector("#threshold");
+let threshold_c = document.querySelector("#threshold_c");
+let interval_c = document.querySelector('#interval_c');
 let imageScale = document.querySelector("#imageScale");
 let rpnNumX = document.querySelector('#rpnNumX');
 let rpnNumY = document.querySelector('#rpnNumY');
@@ -8,6 +10,7 @@ let rpnScaleY = document.querySelector('#rpnScaleY');
 
 let radioEl = document.getElementsByName('radio-for-box');
 let onlyOneEl = document.querySelector('#onlyOne');
+let confusedEl = document.querySelector('#confused');
 
 // ********************* Get camera video **********************
 const constraints = {
@@ -38,7 +41,8 @@ navigator.mediaDevices.getUserMedia(constraints)
 
 // mobile setup
 let mirror = true;
-let r_ww=0.35; r_hh=0.6; r_xx=0.05; r_yy=0.35; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
+let r_ww=0.5; r_hh=0.8; r_xx=0.05; r_yy=0.1; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
+// let r_ww=0.35; r_hh=0.6; r_xx=0.05; r_yy=0.35; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
 let reg_phone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|BB|PlayBook|IEMobile|Windows Phone|Kindle|Silk|Opera Mini/i;
 if (reg_phone.test(navigator.userAgent)) {
     rpnNumX.value = 1;
@@ -46,6 +50,7 @@ if (reg_phone.test(navigator.userAgent)) {
     rpnScaleX.value = 0.6;
     rpnScaleY.value = 0.45;
     threshold.value = 0.88;
+    threshold_c.value = 0.86;
     r_ww=0.6; r_hh=0.45; r_xx=0.2; r_yy=0.4; r_xx_inverted=1-r_ww-r_xx;
     // Take the user to a different screen here.
     // 모바일 후면 카메라 미러효과 없애기
@@ -100,6 +105,9 @@ function setForDetect(url){
             let formdata = new FormData();
             formdata.append("image", file);
             formdata.append("threshold", threshold.value);
+            formdata.append("threshold_c", threshold_c.value);
+            formdata.append("interval_c", interval_c.value);
+            formdata.append("confuseFlag", confusedEl.checked);
             formdata.append("imageScale", imageScale.value);
             formdata.append("rpnNumX", rpnNumX.value);
             formdata.append("rpnNumY", rpnNumY.value);
@@ -172,17 +180,23 @@ function detectPost(){
         let fps = 1/duration*1000;
         fpsEl.innerText = fps.toFixed(2);
 
-        // if(d.confused){
-        //     var toastHTML = `
-        //     <span>헷갈리네요...</span>
-        //     <button class="btn-flat toast-action" onclick="M.toast({html:'나만의 화장대에 등록 완료!', classes: 'rounded my-toast'})">OK</button>
-        //     `;
-        //     M.toast({
-        //         html: toastHTML,
-        //         classes: 'rounded my-toast',
-        //         displayLength: 6000
-        //     });
-        // }
+        // 헷갈리는 부분 등록
+        if(d.confused){
+            console.log(d);
+            let idx = d.frames[0][0]; // 맨 처음것만 진행
+            let b64 = (d.frames[0][1]).replace(/\n/g, '');
+            let toast_id = randomString(8, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+            let toastHTML = `
+            <span>헷갈리네요... ${d.labels[idx]}가 맞습니까? 추가 정보로 등록할까요?</span>
+            <img src="data:image/png;base64,${b64}" style="height:25vw">
+            <button class="btn-flat toast-action" onclick="handelAddConfusedImage('${b64}', ${idx}, '${toast_id}')">OK</button>
+            `;
+            M.toast({
+                html: toastHTML,
+                classes: `rounded my-toast ${toast_id}`,
+                displayLength: 6000
+            });
+        }
         if(radioEl[0].checked){
             //***********box render************ */
             // console.log(d);
@@ -203,6 +217,52 @@ function detectPost(){
         else clearNdraw();
     }) // 텍스트 출력
     .catch(err => console.error(err));
+}
+
+// confused api call
+function handelAddConfusedImage(b64, idx, toast_id){
+    // toast 삭제
+    let toastElement = document.querySelector(`.${toast_id}`);
+    let toastInstance = M.Toast.getInstance(toastElement);
+    toastInstance.dismiss();
+    // 디텍팅 중지
+    document.querySelector('#cards').innerHTML=''
+    terminateAllAPI();
+    document.querySelector('#pred').innerText='EXTRACTING...';
+    document.querySelector('#spinner').style.display='block';
+    document.querySelector('#barrier').style.display='initial';
+    // 500ms 후 등록
+    setTimeout(()=>{
+        postConfused(b64, idx).then(res => {
+            console.log(res);
+            M.toast({html:'추가 사진으로 등록 완료!', classes: 'rounded my-toast'});
+            document.querySelector('#pred').innerText='FINISHED!';
+            document.querySelector('#spinner').style.display='none';
+            document.querySelector('#barrier').style.display='none';
+            smoother = new Smoother(1200);
+        });
+    }, 500);
+}
+function postConfused(b64, idx){
+    return new Promise((resolve, reject) => {
+        let formdata = new FormData();
+        formdata.append("image_b64", b64); // image
+        formdata.append("idx", idx); // image class index
+        let myInit = {
+            method: 'POST',
+            body: formdata
+        }
+        let url='api/confused';
+
+        fetch(url, myInit).then((res) => {
+            if (res.status === 200 || res.status === 201) { // 성공을 알리는 HTTP 상태 코드면
+                resolve(res.json())
+            } else { // 실패를 알리는 HTTP 상태 코드면
+                console.error(res.statusText);
+                reject(res.statusText);
+            }
+        });
+    });
 }
 // -------------------------  detection api -----------------------------
 
@@ -424,6 +484,7 @@ function uploadVideo(){
     // 디비에 등록
     document.querySelector('#pred').innerText='EXTRACTING...';
     document.querySelector('#spinner').style.display='block';
+    document.querySelector('#barrier').style.display='initial';
     fetch('/api/upload', myInit).then((res) => {
         if (res.status === 200 || res.status === 201) { // 성공을 알리는 HTTP 상태 코드면
             return res.json()
@@ -434,8 +495,14 @@ function uploadVideo(){
         console.log(d)
         document.querySelector('#pred').innerText='FINISHED!';
         document.querySelector('#spinner').style.display='none';
+        document.querySelector('#barrier').style.display='none';
         smoother = new Smoother(1200);
         window.myItemList.push(_itemName); // 내 화장품으로 등록
     }).catch(err => console.error(err));
 }
 
+function randomString(length, chars) {
+    var result = '';
+    for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+    return result;
+}

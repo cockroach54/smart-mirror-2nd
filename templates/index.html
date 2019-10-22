@@ -95,10 +95,20 @@
       #toast-container{
         bottom: 160px !important;
       }
+      #barrier{
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        z-index: 1000;
+        display: none;
+        background-color: rgba(100, 100, 100, .7);
+      }
     </style>
   </head>
 
   <body>
+    <div id='barrier'></div>
     <div id="tab-wrapper" class="row">
       <div class="col s12">
         <ul id="my-tabs" class="tabs">
@@ -199,10 +209,25 @@
             <label for="threshold">threshold</label>
           </div>
           <div class="input-field col s4">
+            <input id="threshold_c" type="number" value="0.83" step="0.01"/>
+            <label for="threshold_c">threshold_c</label>
+          </div>
+          <div class="input-field col s4">
+            <input id="interval_c" type="number" value="7" step="1"/>
+            <label for="interval_c">interval_c</label>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="input-field col s4">
             <input id="imageScale" type="number" value="1.0" step="0.1"/>
             <label for="imageScale">imageScale</label>
           </div>
-
+          <div class="input-field col s4">
+            <label>
+              <input id="confused" class="filled-in" type="checkbox" checked="checked"/>
+              <span>confused</span>
+            </label>
+          </div>
           <div class="input-field col s4">
             <p style="margin: 0">
               <label>
@@ -217,8 +242,7 @@
               </label>
             </p>
           </div>
-
-        </div>
+        </div>        
         <div class="row" style="margin-bottom:0; display:none">
           <div class="input-field col s3">
             <input id="rpnNumX" type="number" value="3" step="1"/>
@@ -419,7 +443,7 @@
         // 모드확인 영역
         const detectModeEl = document.querySelector('#detectMode');
         detectModeEl.innerHTML = 'F';
-        //첫 화면 개끗이히 지우기
+        //첫 화면 개끗이 지우기
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
       }
 

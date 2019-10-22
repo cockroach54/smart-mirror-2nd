@@ -38,7 +38,8 @@ model = OracleModel()
 model.to(model.device)
 model.eval()
 # make model dataset first 
-model.makeAllReference_online('static/images_ext')
+image_ext_path = 'static/images_ext'
+model.makeAllReference_online(image_ext_path)
 
 # """
 # Load UBBR model
@@ -64,7 +65,7 @@ def detect_boxes(req):
     if mirror=="true": frame = np.array(image_object)[:,::-1,::-1].copy() # RGB -> BGR for opencv, vertical flip
     else: frame = np.array(image_object)[:,:,::-1].copy() # RGB -> BGR for opencv
     if imageScale != 1.0: frame = cv2.resize(frame, dsize=(0, 0), fx=imageScale, fy=imageScale, interpolation=cv2.INTER_LINEAR) # scale image size
-    print('[frame]', frame.shape)
+    # print('[frame]', frame.shape)
 
     im_tensor = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # opencv image need to convert BGR -> RGB
     im_tensor = model.roi_transform(im_tensor).data.to(model.device).unsqueeze(0)
@@ -83,7 +84,7 @@ def detect_boxes(req):
     filter_idx = (preds_dist[:,0]>model.threshold).type(torch.bool).cpu()
     if not any(filter_idx): 
         # continue # 필터 통과하는거 하나도 없을경우
-        return []
+        return [], frame
     _boxes_cuda = _boxes_cuda[filter_idx]
     preds = preds[filter_idx]
     preds_dist = preds_dist[filter_idx]
@@ -98,7 +99,8 @@ def detect_boxes(req):
     # boxes_cuda = regression_transform(boxes_cuda, offsets)
 
     # non-maximum-suppression
-    bboxes_all = np.array(list(zip(boxes_cuda.cpu().detach().numpy(), preds.cpu().numpy()[:,0], preds_dist.cpu().numpy()[:,0])), dtype=np.object)
+    bboxes_all = np.array(list(zip(boxes_cuda.cpu().detach().numpy(), preds.cpu().numpy()[:,0],
+                                    preds_dist.cpu().numpy()[:,0])), dtype=np.object)
     bboxes_all_nms = []
     for cls in set(bboxes_all[:,1]):
         bboxes_all_nms.append(non_max_sup_one_class(bboxes_all[bboxes_all[:,1]==cls], threshold=0.1, descending=model.sort_order_descending))
@@ -110,7 +112,7 @@ def detect_boxes(req):
             pred_label = model.reference_classes[pred]
             res_text = pred_label+"("+str(dist)+")"
             print(idx, ':', res_text, box)
-    return bboxes_all_nms
+    return bboxes_all_nms, frame
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 def faceRecognition(req): 
@@ -149,6 +151,7 @@ def index():
 """from video to image extraction"""
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
+    global image_ext_path
     f = request.files['myVideo']
     filename = f.filename # 비디오 이름
     f.save("static/videos/"+filename)
@@ -164,28 +167,30 @@ def api_upload():
     # 비디오 리사이징 - crop 모드
     extractor.resizeVideo(mode="crop", crop_scsle_ratio=crop_scsle_ratio)
     # 비디오 전처리
-    print('<<<>>>', extractor.videoHeight, extractor.videoWidth)
     extractor.preprocessVideo(merge_ratio_limit=0.9, SHOW_IMAGE=False)
     # 통계량 추출 
     extractor.getStatistics(SHOW_PLOT=False)
     # # 결과 이미지 영역 크롭
     extractor.extractImages(interval=7, SHOW_IMAGE=False)
     # 비디오 추출시마다 레퍼런스 디비 재생성
-    model.makeAllReference_online('static/images_ext')
+    model.makeAllReference_online(image_ext_path)
     return json.dumps({'success': True, 'filename': filename})
 
 """image detection api"""
+confuse_cnt=0 # 헷갈린 개수
 @app.route('/api/detectweb', methods=['POST'])
 def api_detectweb():
     req = {}
     req['image'] = request.files['image']
-    req['threshold'] = float(request.form.get('threshold'))
+    req['confuseFlag'] = True if request.form.get('confuseFlag')=='true' else False
+    req['threshold'] = float(request.form.get('threshold_c')) if req['confuseFlag'] else float(request.form.get('threshold')) # 일단 confuse 기준으로 전부 필터링
+    req['interval_c'] = int(request.form.get('interval_c'))
     req['mirror'] = request.form.get('mirror')
     req['imageScale'] = float(request.form.get('imageScale'))
     req['rpnNumX'] = int(request.form.get('rpnNumX'))
     req['rpnNumY'] = int(request.form.get('rpnNumY'))
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
-    bboxes_all_nms = detect_boxes(req)
+    # bboxes_all_nms = detect_boxes(req)
 
     # return json.dumps({
     #     'success': True,
@@ -193,23 +198,43 @@ def api_detectweb():
     #     'bboxes': bboxes_all_nms
     # }, cls=MyEncoder)    
 
-    if(len(bboxes_all_nms)>0):
-        mask = bboxes_all_nms[:,2]>req['threshold']+0.02
-        bboxes_all_nms = bboxes_all_nms[mask]
-        print(mask)
-        if not np.all(mask):
-            return json.dumps({
-                'success': True,
-                'labels': model.reference_classes,
-                'bboxes': bboxes_all_nms,
-                'confused': True,
-            }, cls=MyEncoder)    
+    bboxes_all_nms, frame = detect_boxes(req)
+    
+    if(req['confuseFlag']):
+        frames = []
+        global confuse_cnt
+        if(len(bboxes_all_nms)>0):
+            mask = bboxes_all_nms[:,2]> float(request.form.get('threshold'))
+            mask_invert = [not m for m in mask]
+            bboxes_all_nms_confused = bboxes_all_nms[mask_invert]
+            bboxes_all_nms = bboxes_all_nms[mask]
+            # print(mask)
+            if not np.all(mask): # 하나라도 헷갈리는거 있으면
+                confuse_cnt += 1
+                if confuse_cnt>req['interval_c']: # n번에 한번만 보냄
+                    confuse_cnt = 0
+                    # 헷갈리는 영역 이미지 crop해서 base64로 인코딩
+                    for box in bboxes_all_nms_confused:
+                        x,y,w,h = box[0].astype(int)
+                        idx = box[1]
+                        f = frame[y:y+h, x:x+w]
+                        f = cv2.resize(f, (224, 224), interpolation=cv2.INTER_CUBIC)
+                        _cnt = cv2.imencode('.jpg',f)[1].flatten()
+                        b64 = base64.encodestring(_cnt).decode()
+                        frames.append([idx, b64])
+                    return json.dumps({
+                        'success': True,
+                        'labels': model.reference_classes,
+                        'bboxes': bboxes_all_nms,
+                        'confused': True,
+                        'frames': frames
+                    }, cls=MyEncoder)    
     
     return json.dumps({
         'success': True,
         'labels': model.reference_classes,
         'bboxes': bboxes_all_nms,
-        'confused': False,
+        'confused': False
     }, cls=MyEncoder)    
  
 """image detection api(make plot also)"""
@@ -225,7 +250,7 @@ def api_infer():
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
     im = Image.open(req['image'])
     im.save('predict.jpg')
-    bboxes_all_nms = detect_boxes(req)
+    bboxes_all_nms, frame = detect_boxes(req)
     model.save_plot()
 
     return json.dumps({
@@ -246,6 +271,27 @@ def api_faceRecog():
         'face': len(faces),
         'bboxes': faces
     }, cls=MyEncoder)    
+
+"""save confused image api"""
+@app.route('/api/confused', methods=['POST'])
+def api_confused():
+    global image_ext_path
+    b64 = request.form.get('image_b64')
+    idx = int(request.form.get('idx'))
+    label = model.reference_classes[idx]
+    # save image to extract folder
+    filename = label+'-'+str(int(time.time()))+'.jpg'
+    imagePath = os.path.join(image_ext_path, label, filename)
+    imgdata = base64.b64decode(b64)
+    with open(imagePath, 'wb') as f:
+            f.write(imgdata)
+    print('[Confused]: Save image - ', imagePath)    
+    # remake refrence data
+    model.makeAllReference_online(image_ext_path)
+    return json.dumps({
+        'success': True,
+        'imagePath': imagePath
+    }, cls=MyEncoder)
 
 
 if __name__ == '__main__':
