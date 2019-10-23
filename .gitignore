@@ -1,6 +1,9 @@
 static/videos/*.mp4
 static/videos_resized/*
-# static/images_ext/*
+static/images_ext/*
+static/images/plots/*
+!static/images/plots/.gitkeep 
+!static/images_ext/LG-praL
 static/images_ext_bak/*
 deprecated/*
 .vscode/*

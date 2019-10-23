@@ -51,7 +51,7 @@ if (reg_phone.test(navigator.userAgent)) {
     rpnScaleY.value = 0.45;
     threshold.value = 0.88;
     threshold_c.value = 0.86;
-    r_ww=0.6; r_hh=0.45; r_xx=0.2; r_yy=0.4; r_xx_inverted=1-r_ww-r_xx;
+    r_ww=0.7; r_hh=0.45; r_xx=0.15; r_yy=0.5; r_xx_inverted=1-r_ww-r_xx;
     // Take the user to a different screen here.
     // 모바일 후면 카메라 미러효과 없애기
     if(constraints.video.facingMode==="environment"){
@@ -149,7 +149,7 @@ function inferPost(){
             }
             //********************** */            
             // document.querySelector('#pred').innerText = d.prediction.join(' ');
-            document.querySelector('#plot').src = 'plot.jpg';
+            document.querySelector('#plot').src = d.plotPath;
             
 
         }) // 텍스트 출력
@@ -182,20 +182,23 @@ function detectPost(){
 
         // 헷갈리는 부분 등록
         if(d.confused){
-            console.log(d);
-            let idx = d.frames[0][0]; // 맨 처음것만 진행
-            let b64 = (d.frames[0][1]).replace(/\n/g, '');
-            let toast_id = randomString(8, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
-            let toastHTML = `
-            <span>헷갈리네요... ${d.labels[idx]}가 맞습니까? 추가 정보로 등록할까요?</span>
-            <img src="data:image/png;base64,${b64}" style="height:25vw">
-            <button class="btn-flat toast-action" onclick="handelAddConfusedImage('${b64}', ${idx}, '${toast_id}')">OK</button>
-            `;
-            M.toast({
-                html: toastHTML,
-                classes: `rounded my-toast ${toast_id}`,
-                displayLength: 6000
-            });
+            // 두개이상 토스트 안만듦
+            if(document.querySelectorAll('.confuse-toast').length < 2){
+                console.log(d);
+                let idx = d.frames[0][0]; // 맨 처음것만 진행
+                let b64 = (d.frames[0][1]).replace(/\n/g, '');
+                let toast_id = randomString(8, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+                let toastHTML = `
+                <span style="margin-right:10px">헷갈리네요... <span style="color:red; font-weight:bold">${d.labels[idx]}</span>가 맞습니까? 추가 정보로 등록할까요?</span>
+                <img src="data:image/png;base64,${b64}" style="height:22vw">
+                <button class="btn-flat toast-action" style="margin:0; width:10vw" onclick="handelAddConfusedImage('${b64}', ${idx}, '${toast_id}')">OK</button>
+                `;
+                M.toast({
+                    html: toastHTML,
+                    classes: `rounded my-toast ${toast_id} confuse-toast`,
+                    displayLength: 6000
+                });
+            }
         }
         if(radioEl[0].checked){
             //***********box render************ */
@@ -370,6 +373,7 @@ function startObjectDetection() {
     drawCanvas.width = v.videoWidth;
     drawCanvas.height = v.videoHeight;
     videoWrapper.style.height = v.videoHeight + "px";
+    videoWrapper.style.width = v.videoWidth + "px";
 
     imageCanvas.width = uploadWidth;
     imageCanvas.height = uploadWidth * (v.videoHeight / v.videoWidth);

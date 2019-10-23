@@ -61,14 +61,13 @@ def detect_boxes(req):
     model.threshold = threshold
 
     # image array preprocess
-    image_object = Image.open(image_file)
-    if mirror=="true": frame = np.array(image_object)[:,::-1,::-1].copy() # RGB -> BGR for opencv, vertical flip
-    else: frame = np.array(image_object)[:,:,::-1].copy() # RGB -> BGR for opencv
+    image_object = Image.open(image_file) # RGB
+    if mirror=="true": frame = np.array(image_object)[:,::-1,:].copy() # vertical flip
+    else: frame = np.array(image_object).copy() 
     if imageScale != 1.0: frame = cv2.resize(frame, dsize=(0, 0), fx=imageScale, fy=imageScale, interpolation=cv2.INTER_LINEAR) # scale image size
     # print('[frame]', frame.shape)
 
-    im_tensor = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # opencv image need to convert BGR -> RGB
-    im_tensor = model.roi_transform(im_tensor).data.to(model.device).unsqueeze(0)
+    im_tensor = model.roi_transform(frame).data.to(model.device).unsqueeze(0)
     featuremaps = model(im_tensor)
     # region proposal network extracts ROIs
     # boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
@@ -129,7 +128,6 @@ def faceRecognition(req):
     return faces
 
 # ------------------------flask app------------------------------
-
 app = Flask(__name__, static_url_path='',
             static_folder='./static',
             template_folder='./templates')
@@ -173,7 +171,8 @@ def api_upload():
     # # 결과 이미지 영역 크롭
     extractor.extractImages(interval=7, SHOW_IMAGE=False)
     # 비디오 추출시마다 레퍼런스 디비 재생성
-    model.makeAllReference_online(image_ext_path)
+    # model.makeAllReference_online(image_ext_path)
+    model.addNewLabel_online(image_ext_path, itemName)
     return json.dumps({'success': True, 'filename': filename})
 
 """image detection api"""
@@ -208,8 +207,8 @@ def api_detectweb():
             mask_invert = [not m for m in mask]
             bboxes_all_nms_confused = bboxes_all_nms[mask_invert]
             bboxes_all_nms = bboxes_all_nms[mask]
-            # print(mask)
-            if not np.all(mask): # 하나라도 헷갈리는거 있으면
+            if np.all(mask_invert): # 헷갈리는 것만 있으면
+                print(mask_invert)
                 confuse_cnt += 1
                 if confuse_cnt>req['interval_c']: # n번에 한번만 보냄
                     confuse_cnt = 0
@@ -219,8 +218,9 @@ def api_detectweb():
                         idx = box[1]
                         f = frame[y:y+h, x:x+w]
                         f = cv2.resize(f, (224, 224), interpolation=cv2.INTER_CUBIC)
+                        f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB) # opencv image need to convert BGR -> RGB
                         _cnt = cv2.imencode('.jpg',f)[1].flatten()
-                        b64 = base64.encodestring(_cnt).decode()
+                        b64 = base64.encodebytes(_cnt).decode() # rgb
                         frames.append([idx, b64])
                     return json.dumps({
                         'success': True,
@@ -248,15 +248,21 @@ def api_infer():
     req['rpnNumX'] = int(request.form.get('rpnNumX'))
     req['rpnNumY'] = int(request.form.get('rpnNumY'))
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
+    bboxes_all_nms, frame = detect_boxes(req)
+    # for saving input image
     im = Image.open(req['image'])
     im.save('predict.jpg')
-    bboxes_all_nms, frame = detect_boxes(req)
-    model.save_plot()
+    # for plot image
+    plotName = 'plot-'+str(int(time.time()))+'.jpg'
+    plotPath = os.path.join('static/images/plots',plotName)
+    plotPath_for_client = os.path.join('images/plots',plotName)
+    model.save_plot(plotPath)
 
     return json.dumps({
         'success': True,
         'labels': model.reference_classes,
-        'bboxes': bboxes_all_nms
+        'bboxes': bboxes_all_nms,
+        'plotPath': plotPath_for_client
     }, cls=MyEncoder)    
 
 """"for face recognition"""
@@ -282,12 +288,17 @@ def api_confused():
     # save image to extract folder
     filename = label+'-'+str(int(time.time()))+'.jpg'
     imagePath = os.path.join(image_ext_path, label, filename)
-    imgdata = base64.b64decode(b64)
+    imgbyte = base64.b64decode(b64)
+    # imgbyte to np array
+    nparr = np.frombuffer(imgbyte, np.uint8)
+    img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR) # bgr
+    img_np = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB) # rgb
     with open(imagePath, 'wb') as f:
-            f.write(imgdata)
+            f.write(imgbyte)
     print('[Confused]: Save image - ', imagePath)    
-    # remake refrence data
-    model.makeAllReference_online(image_ext_path)
+    # remake reference data (RGB)
+    model.addNewData_online(img_np, label)
+    # model.makeAllReference_online(image_ext_path)
     return json.dumps({
         'success': True,
         'imagePath': imagePath

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, models, transforms
 import cv2
+from PIL import Image
 import numpy as np
 import pandas as pd
 import os, shutil
@@ -124,20 +125,65 @@ class OracleModel(nn.Module):
 
         represented = torch.cat(_temp, dim=0)
         # raw data label 별 평균 구해두기
-        df_ref = pd.DataFrame(represented.cpu().numpy())
-        df_ref['label'] = [reference_dataset.classes[i] for i in reference_dataset.targets]
-        reference_means = df_ref.groupby('label').mean()
-        dir_list = reference_dataset.classes
+        self.df_ref_online = pd.DataFrame(represented.cpu().numpy())
+        self.df_ref_online['label'] = [reference_dataset.classes[i] for i in reference_dataset.targets]
+        self.reference_means_online = self.df_ref_online.groupby('label').mean()
+        self.dir_list_online = reference_dataset.classes
 
         # 즉각 임베딩 디비 생성
-        self.setReferenceDataset(dir_list, df_ref, reference_means)
-        return dir_list, df_ref, reference_means
+        self.setReferenceDataset(self.dir_list_online, self.df_ref_online, self.reference_means_online)
+        return self.dir_list_online, self.df_ref_online, self.reference_means_online
+
+    def addNewData_online(self, im_arr, label):
+        """
+        @params im_arr: h X w X 3 (RGB)
+        @params label: "praL"
+        """
+        data = self.roi_transform(im_arr).unsqueeze(0)
+        outputs = self.embed(data.to(self.device)).data
+        new_feature = list(outputs.squeeze().cpu().numpy())
+        new_feature.append(label)
+        new_feature[-1]
+        # concat to prev df_ref_online
+        self.df_ref_online.loc[self.df_ref_online.shape[0]] = new_feature
+        # revise reference_means_online 
+        self.reference_means_online = self.df_ref_online.groupby('label').mean()
+        # 즉각 임베딩 디비 생성
+        self.setReferenceDataset(self.dir_list_online, self.df_ref_online, self.reference_means_online)
+        print('[Detector]: addNewData_online -', label)
+        return
+
+    def addNewLabel_online(self, dirPath, label):   
+        """
+        @params dirPath: "server/vu-visor/static/images_ext"
+        @params label: "praL"
+        """
+        finalDirPath = os.path.join(dirPath, label)
+        ims = [Image.open(os.path.join(finalDirPath,i)) for i in os.listdir(finalDirPath)] # n_img X h X w X c
+        ims_tensor = torch.stack([self.roi_transform(im) for im in ims])
+        outputs = self.embed(ims_tensor.to(self.device)).data
+        new_features =outputs.cpu().numpy() # n_img X 2048
+
+        new_df_ref_online = pd.DataFrame(new_features)
+        new_df_ref_online['label'] = label
+        # add new label
+        if label not in self.dir_list_online: # 중복된 이름 없을 시 새로 등록
+            self.dir_list_online.append(label)
+        # concat to prev df_ref_online
+        _df_ref_online_non_overlap = self.df_ref_online[self.df_ref_online['label']!=label] # 중복된 이전 데이터 제거
+        self.df_ref_online = pd.concat([_df_ref_online_non_overlap, new_df_ref_online], ignore_index=True)
+        # revise reference_means_online 
+        self.reference_means_online = self.df_ref_online.groupby('label').mean()
+        # 즉각 임베딩 디비 생성
+        self.setReferenceDataset(self.dir_list_online, self.df_ref_online, self.reference_means_online)
+        print('[Detector]: addNewLabel_online -', label)
+        return 
         
     # 임베딩 디비 생성
-    def setReferenceDataset(self, sample_dir_list, df_ref_featere_sampled, reference_means_sampled):
+    def setReferenceDataset(self, sample_dir_list, df_ref_feature_sampled, reference_means_sampled):
         self.reference_classes = sample_dir_list
-        self.reference_targets = list(df_ref_featere_sampled.iloc[:,-1])
-        self.embedded_features_cpu = torch.tensor(df_ref_featere_sampled.iloc[:,:-1].as_matrix()).float().data # float64->float32(torch default), cpu
+        self.reference_targets = list(df_ref_feature_sampled.iloc[:,-1])
+        self.embedded_features_cpu = torch.tensor(df_ref_feature_sampled.iloc[:,:-1].as_matrix()).float().data # float64->float32(torch default), cpu
         self.embedded_features = self.embedded_features_cpu.to(self.device) # gpu
         self.embedded_means_numpy = reference_means_sampled.as_matrix()
         self.embedded_means = torch.tensor(self.embedded_means_numpy).float().data.to(self.device) # float64->float32(torch default), gpu
@@ -163,96 +209,6 @@ class OracleModel(nn.Module):
         self.df['name'] = self.reference_targets
         self.centers = pd.DataFrame(self.pca.transform(self.embedded_means_numpy))
         self.centers['name'] = self.reference_classes
-
-    def inference_tensor2(self, inputs, metric='cos'):
-        """
-        @params metric: [l2, mahalanobis, prob]
-        """
-        # set metric function
-        if metric == 'l2':
-            self.metric_fn = self.calc_l2
-            self.sort_order_descending = False
-        elif metric == 'cos':
-            self.metric_fn = self.calc_cos  
-            self.sort_order_descending = True  
-
-        # inputs shape: Batch*C*H*W
-        # input to backbone model
-        self.inputs = inputs
-        self.outputs = self.embed(self.inputs).data # n_roi X features
-
-        # inference
-        if metric == 'l2':
-            _diff = torch.stack([o-self.embedded_features for o in self.outputs]) # n_roi X classes X features
-            self.dists = _diff.norm(dim=2, keepdim=True).squeeze()
-        elif metric == 'cos':
-            dists = [self.cos(self.embedded_features, o.unsqueeze(0)) for o in self.outputs]
-            self.dists = torch.stack(dists)
-
-        self.dists_sorted = self.dists.sort(dim=1, descending=self.sort_order_descending)
-        self.predicts = torch.tensor(np.array([self.embedded_labels[idxs] for idxs in self.dists_sorted.indices.cpu()])).long()[:,:self.topk]
-        self.predicts_dist = self.dists_sorted.values[:,:self.topk]
-        return self.predicts.data, self.predicts_dist.data
-
-    def inference_tensor(self, inputs, metric='cos'):
-        """
-        @params metric: [l2, mahalanobis, prob]
-        """
-        # set metric function
-        if metric == 'l2':
-            self.metric_fn = self.calc_l2
-            self.sort_order_descending = False
-        elif metric == 'cos':
-            self.metric_fn = self.calc_cos  
-            self.sort_order_descending = True  
-
-        # inputs shape: Batch*C*H*W
-        # input to backbone model
-        self.inputs = inputs
-        self.outputs = self.embed(self.inputs).data # n_roi X features
-
-        # inference
-        if metric == 'l2':
-            _diff = torch.stack([o-self.embedded_means for o in self.outputs]) # n_roi X classes X features
-            self.dists = _diff.norm(dim=2, keepdim=True).squeeze()
-        elif metric == 'cos':
-            dists = [self.cos(self.embedded_means, o.unsqueeze(0)) for o in self.outputs]
-            self.dists = torch.stack(dists)
-
-        self.dists_sorted = self.dists.sort(dim=1, descending=self.sort_order_descending)
-        self.predicts = self.dists_sorted.indices[:,:self.topk]
-        self.predicts_dist = self.dists_sorted.values[:,:self.topk]
-        return self.predicts.data, self.predicts_dist.data
-
-    def inference_tensor4(self, inputs, metric='cos'):
-        """
-        @params metric: [l2, mahalanobis, prob]
-        """
-        # set metric function
-        if metric == 'l2':
-            self.metric_fn = self.calc_l2
-            self.sort_order_descending = False
-        elif metric == 'cos':
-            self.metric_fn = self.calc_cos  
-            self.sort_order_descending = True  
-
-        # inputs shape: Batch*C*H*W
-        # input to backbone model
-        self.inputs = inputs
-        self.outputs = self.fc(self.inputs).data # n_roi X features
-
-        # inference
-        if metric == 'l2':
-            _diff = torch.stack([o-self.embedded_features for o in self.outputs]) # n_roi X classes X features
-            self.dists = _diff.norm(dim=2, keepdim=True).squeeze()
-        elif metric == 'cos':
-            dists = [self.cos(self.embedded_features, o.unsqueeze(0)) for o in self.outputs]
-            self.dists = torch.stack(dists)
-
-        self.dists_sorted = self.dists.sort(dim=1, descending=self.sort_order_descending)
-        self.predicts = torch.tensor(np.array([self.embedded_labels[idxs] for idxs in self.dists_sorted.indices.cpu()])).long()[:,:self.topk]
-        self.predicts_dist = self.dists_sorted.values[:,:self.topk]
-        return self.predicts.data, self.predicts_dist.data
 
     def inference_tensor3(self, inputs, metric='cos', knn=True):
         """
@@ -328,7 +284,7 @@ class OracleModel(nn.Module):
         plt.show()
 
     # save plot image for web
-    def save_plot(self):
+    def save_plot(self, plotPath):
         self.fit_pca(n_components=4)
         _outputs = self.pca.transform(self.outputs.cpu())
 
@@ -337,4 +293,4 @@ class OracleModel(nn.Module):
         ax = sns.scatterplot(x=0, y=1, hue='name', data=self.df, palette="Set1", legend="full", s=30)
         ax2 = sns.scatterplot(x=0, y=1, hue='name', data=self.centers, palette="Set1", s=150, legend=None, edgecolor='black')
         plt.scatter(_outputs[:,0], _outputs[:,1], marker='x', c='black', s=120)
-        plt.savefig(os.path.join('./static', 'plot.jpg'))
+        plt.savefig(plotPath)
