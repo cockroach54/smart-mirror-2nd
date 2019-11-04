@@ -71,7 +71,7 @@ def detect_boxes(req):
     featuremaps = model(im_tensor)
     # region proposal network extracts ROIs
     # boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
-    boxes = rpn(frame, num_boxs=200, scale=.5)
+    boxes = rpn(frame, num_boxs=1000, scale=0.5)
 
     # roi align
     _boxes_cuda = torch.from_numpy(boxes).float().cuda()
@@ -169,7 +169,7 @@ def api_upload():
     # 통계량 추출 
     extractor.getStatistics(SHOW_PLOT=False)
     # # 결과 이미지 영역 크롭
-    extractor.extractImages(interval=7, SHOW_IMAGE=False)
+    extractor.extractImages(interval=12, SHOW_IMAGE=False)
     # 비디오 추출시마다 레퍼런스 디비 재생성
     # model.makeAllReference_online(image_ext_path)
     model.addNewLabel_online(image_ext_path, itemName)
@@ -251,7 +251,10 @@ def api_infer():
     bboxes_all_nms, frame = detect_boxes(req)
     # for saving input image
     im = Image.open(req['image'])
-    im.save('predict.jpg')
+    if req['mirror']=="true": im = np.array(im)[:,::-1,:].copy() # vertical flip
+    else: im = np.array(im).copy() 
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB) 
+    cv2.imwrite('predict.jpg', im)
     # for plot image
     plotName = 'plot-'+str(int(time.time()))+'.jpg'
     plotPath = os.path.join('static/images/plots',plotName)

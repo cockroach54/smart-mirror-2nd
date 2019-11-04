@@ -61,9 +61,6 @@
         z-index: -1;
         /* Mirror the local video */
         transform: scale(-1, 1);
-        /*For Firefox (& IE) */
-        -webkit-transform: scale(-1, 1);
-        /*for Chrome & Opera (& Safari) */
       }
 
       canvas {
@@ -145,11 +142,15 @@
       <div id="cntr" class="container">
         <div class="fixed-action-btn" style="top:5px">
           <a
+            id='flip-cam'
+            class="btn-floating btn-large waves-effect waves-light blue"
+            style="display: none;"
+          ><i class="Large material-icons">flip_camera_ios</i></a>
+          <a
             id="record"
             isRecording="no"
             class="btn-floating btn-large waves-effect waves-light green"
-            ><i class="Large material-icons">videocam</i></a
-          >
+          ><i class="Large material-icons">videocam</i></a>
         </div>
         <div id="videoWrapper">
           <video id="myVideo" autoplay></video>
@@ -205,11 +206,11 @@
         </div>
         <div class="row" style="margin-bottom:0">
           <div class="input-field col s4">
-            <input id="threshold" type="number" value="0.85" step="0.01"/>
+            <input id="threshold" type="number" value="0.87" step="0.01"/>
             <label for="threshold">threshold</label>
           </div>
           <div class="input-field col s4">
-            <input id="threshold_c" type="number" value="0.83" step="0.01"/>
+            <input id="threshold_c" type="number" value="0.85" step="0.01"/>
             <label for="threshold_c">threshold_c</label>
           </div>
           <div class="input-field col s4">

@@ -13,14 +13,14 @@ let onlyOneEl = document.querySelector('#onlyOne');
 let confusedEl = document.querySelector('#confused');
 
 // ********************* Get camera video **********************
-const constraints = {
+let constraints = {
     audio: false,
     // video: {
     //     width: {min: 640, ideal: 1280, max: 1920},
     //     height: {min: 480, ideal: 720, max: 1080}
     // }
     video: {
-        // facingMode: "environment", // mobile에서 적용 "environment":후면카메라, "user":전면카메라
+        // facingMode: facingMode, // mobile에서 적용 "environment":후면카메라, "user":전면카메라
         facingMode: "user", // mobile에서 적용 "environment":후면카메라, "user":전면카메라
         width: { min: 100, ideal: 420, max: 640 },
         // height: {min: 200, ideal: 360, max: 480}
@@ -32,11 +32,42 @@ navigator.mediaDevices.getUserMedia(constraints)
         window.stream = stream;
         document.getElementById("myVideo").srcObject = stream;
         console.log("Got local user video");
-
     })
     .catch(err => {
         console.log('navigator.getUserMedia error: ', err)
     });
+
+// restart webRTC camera
+function startWebRTCCamera(constraints){      
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+            window.stream = stream;
+            document.getElementById("myVideo").srcObject = stream;
+            console.log("Got local user video");
+        })
+        .catch(err => {
+            console.log('navigator.getUserMedia error: ', err)
+        });
+}
+
+document.querySelector('#flip-cam').addEventListener('click', ()=>{
+    if(constraints.video.facingMode==='environment'){
+        constraints.video.facingMode='user';
+        document.querySelector('video').style.transform = 'scale(1,1)';
+    }
+    else{
+        constraints.video.facingMode='environment';
+        document.querySelector('video').style.transform = 'scale(1,1)';
+    }
+    // stream 먼저 종료 안하면 비동기 순서 에러남
+    window.stream.getTracks().forEach(function(track) {
+        track.stop();
+        isPlaying = false,
+        gotMetadata = false;
+        startWebRTCCamera(constraints);
+      });
+
+});
 // ***************************************************************
 
 // mobile setup
@@ -55,9 +86,10 @@ if (reg_phone.test(navigator.userAgent)) {
     // Take the user to a different screen here.
     // 모바일 후면 카메라 미러효과 없애기
     if(constraints.video.facingMode==="environment"){
-        document.querySelector('video').style.transform = 'scale(1,1)';
-        mirror = false
+        document.querySelector('video').style.transform = 'scale(-1,1)';
     }
+    // make camera flip button visible
+    document.querySelector('#flip-cam').style.display='inline-block';
 }
 
 //Parameters
@@ -363,7 +395,7 @@ function FaceRecogPost(){
 // -------------------------  simple face recog opencv -----------------------------
 
 
-// Start object detection
+// Start web rtc camera
 let ratio;
 function startObjectDetection() {
 

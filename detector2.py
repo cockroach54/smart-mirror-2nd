@@ -36,29 +36,53 @@ class OracleModel(nn.Module):
     def __init__(self):
         """Load the pretrained ResNet-152 and replace top fc layer."""
         super(OracleModel, self).__init__()
-        # ****torch pretrained net****
-
+#         ****torch pretrained net****
+#         net = models.shufflenetv2.shufflenet_v2_x1_0(pretrained=True) # 1024
+        net = models.resnet50(pretrained=True)
+#         net = torch.hub.load('pytorch/vision', 'mobilenet_v2', pretrained=True)
+#         net = models.mobilenet_v2(pretrained=True)
+#         net = models.densenet201(pretrained=True)
+#         self.backbone = net
+        modules = list(net.children())[:-2]      # resnet conv_5
         avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=(1, 1))
         flatten = Flatten()
-        net = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, 
-                                                        pretrained_backbone=True)   
-        self.backbone = net.backbone #256 
+#         self.backbone = torch.nn.Sequential(*modules, avg_pool, flatten) #1280    
+        self.backbone = torch.nn.Sequential(*modules) # 2048
+
+# #         ****mobilenet****
+#         self.BACKBONE_PATH = 'torch_models/mobile_ft.pt'
+#         mobilenet = torch.load(self.BACKBONE_PATH)
+#         modules = list(mobilenet.children())[:-1]
+#         avg_pool = torch.nn.AvgPool2d(7, stride=1)
+#         flatten = Flatten()
+#         self.backbone = torch.nn.Sequential(*modules, avg_pool, flatten) #1280
+        
+# #         ****mobilnet distance matric learning****   
+#         self.BACKBONE_PATH = 'mymodels/model_000400.pth'
+#         self.backbone = torch.load(self.BACKBONE_PATH) #1280    
+
+#         self.backbone = mymodels.create('Resnet50', dim=512, pretrained=True,
+#                                         model_path='mymodels/ckp_ep210.pth.tar') #[227,227]->512
+
+#         self.backbone = BN_Inception(dim=512, pretrained=True, 
+#                                      model_path='mymodels/bn_inception-52deb4733.pth')
 
         # fc layer
         self.fc = nn.Sequential(
             avg_pool,
             flatten
-        ) # 256
+        ) # 2048
         
-        # self.embed = nn.Sequential(
-        #     self.backbone,
-        #     self.fc
-        # ) # 256
+        self.embed = nn.Sequential(
+            self.backbone,
+            self.fc
+        ) # 2048
     
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.topk = 3
         self.threshold = 0.75
-        self.feature_len = 256
+        self.feature_len = 2048
+#         self.feature_len = 2048
 
         self.sort_order_descending = False
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
@@ -68,13 +92,9 @@ class OracleModel(nn.Module):
                         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
                     ])
 
-    def embed(self, images):
-        r = self(images)
-        return self.fc(r)
-        
     def forward(self, images):
         """Extract feature vectors from input images."""
-        return self.backbone(images)[0]
+        return self.backbone(images)
     
 
     def makeAllReference_online(self, referenceImgDirPath):
@@ -142,7 +162,7 @@ class OracleModel(nn.Module):
         ims = [Image.open(os.path.join(finalDirPath,i)) for i in os.listdir(finalDirPath)] # n_img X h X w X c
         ims_tensor = torch.stack([self.roi_transform(im) for im in ims])
         outputs = self.embed(ims_tensor.to(self.device)).data
-        new_features =outputs.cpu().numpy() # n_img X 256
+        new_features =outputs.cpu().numpy() # n_img X 2048
 
         new_df_ref_online = pd.DataFrame(new_features)
         new_df_ref_online['label'] = label
@@ -181,7 +201,7 @@ class OracleModel(nn.Module):
     def fit_pca(self, n_components=4):
         # pca model fit
         self.n_components = n_components
-        self.pca = PCA(n_components=self.n_components) # 256 차원 다쓰면 나중에 샘플링에서 계산 오류남, sample 개수보다 많으면 촐레스키 분해 에러나는듯
+        self.pca = PCA(n_components=self.n_components) # 2048 차원 다쓰면 나중에 샘플링에서 계산 오류남, sample 개수보다 많으면 촐레스키 분해 에러나는듯
         self.transformed = self.pca.fit_transform(self.embedded_features_cpu)
 
         # show PCA features 
@@ -199,7 +219,7 @@ class OracleModel(nn.Module):
         # inputs shape: Batch*C*H*W
         # input to backbone model
         self.inputs = inputs
-        self.outputs = self.fc(self.inputs).data # n_roi X features 256    
+        self.outputs = self.fc(self.inputs).data # n_roi X features 2048    
 
         # inference
         self.sort_order_descending = True         
@@ -220,7 +240,7 @@ class OracleModel(nn.Module):
         # inputs shape: Batch*C*H*W
         # input to backbone model
         self.inputs = inputs
-        self.outputs = self.fc(self.inputs).data # n_roi X features 256    
+        self.outputs = self.fc(self.inputs).data # n_roi X features 2048    
 
         # inference
         self.dists = my_cos(self.outputs, self.embedded_means)

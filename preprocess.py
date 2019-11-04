@@ -25,6 +25,7 @@ class ImageExtractor:
         self.imageHeight = 224 # 추출할 이미지 높이 
         self.CONSTANT_RATIO = False # 추출할 이미지 리사이징할때 ratio warp할지
         self.n_cluster = 5 # 히스토그램 클러스터 개수
+        self.SHOW_KMEANS_PLOT = False # kmeans plot 보여줄지
         self.candidateImages = []
         self.itemName = os.path.splitext(filename)[0]
         self.rootPath = rootPath
@@ -202,14 +203,14 @@ class ImageExtractor:
             
         return detectedRect
 
-    def _fit_KMeans(self, data, k, SHOW_PLOT=False):
+    def _fit_KMeans(self, data, k):
         model = KMeans(n_clusters=k, init="k-means++", max_iter=100, random_state=8).fit(data)
         centroids = model.cluster_centers_
         
-        if(SHOW_PLOT):
+        if(self.SHOW_KMEANS_PLOT):
             pca = PCA(n_components=2)
             transformed = pca.fit_transform(data)
-            transformed_centroids = pca.fit_transform(centroids)
+            transformed_centroids = pca.transform(centroids)
 
             plt.figure(figsize=(8, 8))
             plt.scatter(transformed[:,0], transformed[:,1], marker='o', c=model.labels_)
@@ -237,8 +238,8 @@ class ImageExtractor:
         if(len(self.hists)<self.n_cluster):
             print('[kmeans]: n_images -', len(self.hists), ', n_clusters -', self.n_cluster)
             print('[kmeans]: set k=', len(self.hists))
-            kmeans = self._fit_KMeans(self.hists, len(self.hists), SHOW_PLOT=False)
-        else: kmeans = self._fit_KMeans(self.hists, self.n_cluster, SHOW_PLOT=False)
+            kmeans = self._fit_KMeans(self.hists, len(self.hists))
+        else: kmeans = self._fit_KMeans(self.hists, self.n_cluster)
         cluster_labels = Counter(kmeans.labels_) # 클러스터별 이미지 개수
         cluster_dists = []
         for i in range(len(kmeans.cluster_centers_)):
@@ -249,6 +250,7 @@ class ImageExtractor:
         # 나머지 클러스터들과의 가까운 것(특이값 제외) 순으로 정렬
         # 최대 3개의 클러스터 사용
         major_cluster = cluster_dists.sum(axis=1).argsort()[:3]
+        if(self.SHOW_KMEANS_PLOT): print('[major cluster]:', major_cluster)
 
         self.filtered_idx = [idx in major_cluster for idx in kmeans.labels_ ]
 
@@ -264,6 +266,11 @@ class ImageExtractor:
                 imgPath = os.path.join(imgDirTemp, "temp"+'_'+str(idx)+'.jpg')
                 cv2.imwrite(imgPath, img_trim) # 이미지 저장
                 os.rename(imgPath, imgPathOrig) #  opencv 한글 패스 저장 안되므로 temp에 만들고 이름 수정 
+                
+                imgPathOrigFlip = os.path.join(imgDirOrig, str(self.itemName)+'_flip_'+str(idx)+'.jpg')    
+                imgPathFlip = os.path.join(imgDirTemp, "temp"+'_flip_'+str(idx)+'.jpg')
+                cv2.imwrite(imgPathFlip, np.array(img_trim)[:,::-1,:].copy()) # vertical flip 저장
+                os.rename(imgPathFlip, imgPathOrigFlip) #  opencv 한글 패스 저장 안되므로 temp에 만들고 이름 수정 
         except:
             print('[Save Img Error:]', imgPath)
 
