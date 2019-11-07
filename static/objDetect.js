@@ -50,14 +50,26 @@ function startWebRTCCamera(constraints){
         });
 }
 
+// 카메라 플립 핸들러
 document.querySelector('#flip-cam').addEventListener('click', ()=>{
+    // 카드 전부 삭제
+    document.querySelector('#cards').innerHTML = '';
+    // 화면 지우기
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    // api종료하기
+    terminateAllAPI();
+
     if(constraints.video.facingMode==='environment'){
+        // 전면 카메라 세팅
         constraints.video.facingMode='user';
-        document.querySelector('video').style.transform = 'scale(1,1)';
+        document.querySelector('video').style.transform = 'scale(-1,1)';
+        mirror = true;
     }
     else{
+        // 후면 카메라 세팅
         constraints.video.facingMode='environment';
         document.querySelector('video').style.transform = 'scale(1,1)';
+        mirror = false;
     }
     // stream 먼저 종료 안하면 비동기 순서 에러남
     window.stream.getTracks().forEach(function(track) {
@@ -71,7 +83,7 @@ document.querySelector('#flip-cam').addEventListener('click', ()=>{
 // ***************************************************************
 
 // mobile setup
-let mirror = true;
+let mirror = true; // 전면 카메라
 let r_ww=0.5; r_hh=0.8; r_xx=0.05; r_yy=0.1; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
 // let r_ww=0.35; r_hh=0.6; r_xx=0.05; r_yy=0.35; r_xx_inverted=1-r_ww-r_xx; // 동영상 좌우 반전 되돌리기
 let reg_phone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|BB|PlayBook|IEMobile|Windows Phone|Kindle|Silk|Opera Mini/i;
@@ -86,6 +98,7 @@ if (reg_phone.test(navigator.userAgent)) {
     // Take the user to a different screen here.
     // 모바일 후면 카메라 미러효과 없애기
     if(constraints.video.facingMode==="environment"){
+        mirror = false;
         document.querySelector('video').style.transform = 'scale(-1,1)';
     }
     // make camera flip button visible
@@ -172,6 +185,7 @@ inferBtn.addEventListener("click", ()=>{
 function inferPost(){
     setForDetect('api/infer').then(d => {
             //*********************** */
+            window.d = d;
             console.log(d)
             clearNdraw();
             for (bbox of d.bboxes){
@@ -243,8 +257,9 @@ function detectPost(){
             }
         }
         // for smoother
-        if(onlyOneEl.checked) smoother.renewQueue(d.bboxes.slice(0,1)); // 검출된것 중 오로지 하나만 카드 만듦
-        else smoother.renewQueue(d.bboxes); // 검출된것 전체로 카드 만듦
+        let bboxes_filtered = d.bboxes.filter(x=> d.labels[x[1]]!=='hand'); // 손은 검출 제거
+        if(onlyOneEl.checked) smoother.renewQueue(bboxes_filtered.slice(0,1)); // 검출된것 중 오로지 하나만 카드 만듦
+        else smoother.renewQueue(bboxes_filtered); // 검출된것 전체로 카드 만듦
         smoother.showDetectedClass();
         //********************************* */      
 

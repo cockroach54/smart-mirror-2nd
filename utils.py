@@ -42,8 +42,7 @@ def non_max_sup_one_class(bboxes, threshold=0.2, descending=False):
 
 edge_model = "./model.yml.gz"
 edge_detection = cv2.ximgproc.createStructuredEdgeDetection(edge_model)
-
-def rpn(im_opencv, num_boxs, scale=1):
+def rpn(im_opencv, num_boxs, scale=1, min_score=0.01):
     """
     region proposal network
     """
@@ -54,29 +53,32 @@ def rpn(im_opencv, num_boxs, scale=1):
                                       interpolation=cv2.INTER_CUBIC).astype(np.float32)
 
         edges = edge_detection.detectEdges(im_opencv_scaled / 255.0)
-
         orimap = edge_detection.computeOrientation(edges)
         edges = edge_detection.edgesNms(edges, orimap)
-
-        edge_boxes = cv2.ximgproc.createEdgeBoxes()
+        
+        edge_boxes = cv2.ximgproc.createEdgeBoxes() 
+        edge_boxes.setBeta(0.75) # beta=0.1, nms threshold for object proposals.
         edge_boxes.setMaxBoxes(num_boxs)
-        boxes = edge_boxes.getBoundingBoxes(edges, orimap)
-        if type(boxes)==tuple and len(boxes)==2: boxes=boxes[0] # 버전에따라 다르게 나오는거 보정
-        return boxes, im_opencv_scaled
+        edge_boxes.setMinScore(min_score) # box score
+        boxes, scores = edge_boxes.getBoundingBoxes(edges, orimap)
+        return boxes, scores, im_opencv_scaled
     
-    (boxes, im_opencv_scaled) = makeEdgeBox(scale)
+    (boxes, scores, im_opencv_scaled) = makeEdgeBox(scale)
     # bbox 하나도 없으면 전체샷이라도 저장
-    if len(boxes)==0: boxes=np.array([[0,0,im_opencv_scaled.shape[1],im_opencv_scaled.shape[0]]])
+    if len(boxes)==0: 
+        boxes=np.array([[0,0,im_opencv_scaled.shape[1],im_opencv_scaled.shape[0]]])
+        scores=np.array([[min_score]])
     boxes = (boxes/scale).round().astype(np.int)
     # 박스 개수 절반보다 모자라면 스케일 키워서 한번더
     if len(boxes)<(num_boxs/2):
         scale = scale*2
-        (_boxes, im_opencv_scaled) = makeEdgeBox(scale)
+        (_boxes, _scores, im_opencv_scaled) = makeEdgeBox(scale)
         if len(_boxes)>0:
             _boxes = (_boxes/scale).round().astype(np.int)
             boxes = np.concatenate([boxes,_boxes])[:num_boxs] # 이전 스케일의 박스와 concat
+            scores = np.concatenate([scores,_scores])[:num_boxs]
 
-    return boxes
+    return boxes, scores
 
 def rpn2(im, n_slice_x, n_slice_y, scale=(1,1)):
     """

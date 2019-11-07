@@ -7,18 +7,23 @@ import numpy as np
 from time import sleep
 import cv2
 from preprocess import *
-from detector import *
+from detector2 import *
+from cam_conv_model import *
 from utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--d', type=str, default='T', choices=['T','F'],
             help="Flask debug True or False. On demo set this False")
 parser.add_argument('--port', type=int, default=5000,
-            help="Flask server port")            
+            help="Flask server port")
+parser.add_argument('--cam', type=str, default='F', choices=['T','F'],
+            help="CAM model usage. True or False. default False")            
 
 args = parser.parse_args()
 PORT = args.port
 DEBUG = True if args.d=='T' else False
+USE_CAM = True if args.cam=='T' else False
+print('[args]', args)
 
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -32,13 +37,25 @@ class MyEncoder(json.JSONEncoder):
             return super(MyEncoder, self).default(obj)
 
 """
+Load CAM model
+"""     
+if USE_CAM:       
+    cam_model = CAM(n_classes=21)
+    cam_model.to(cam_model.device)
+    cam_model.eval()
+    cam_model.load_state_dict(torch.load('cam-myconv-21.pth'))
+else:
+    cam_model = None
+
+
+"""
 Load Oracle model
 """
 model = OracleModel()
 model.to(model.device)
 model.eval()
 # make model dataset first 
-image_ext_path = 'static/images_ext'
+image_ext_path = os.path.join('static', 'images_ext')
 model.makeAllReference_online(image_ext_path)
 
 # """
@@ -62,7 +79,7 @@ def detect_boxes(req):
 
     # image array preprocess
     image_object = Image.open(image_file) # RGB
-    if mirror=="true": frame = np.array(image_object)[:,::-1,:].copy() # vertical flip
+    if mirror=="true": frame = np.array(image_object)[:,::-1,:].copy() # horizental flip
     else: frame = np.array(image_object).copy() 
     if imageScale != 1.0: frame = cv2.resize(frame, dsize=(0, 0), fx=imageScale, fy=imageScale, interpolation=cv2.INTER_LINEAR) # scale image size
     # print('[frame]', frame.shape)
@@ -71,7 +88,7 @@ def detect_boxes(req):
     featuremaps = model(im_tensor)
     # region proposal network extracts ROIs
     # boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
-    boxes = rpn(frame, num_boxs=1000, scale=0.5)
+    boxes, scores = rpn(frame, num_boxs=300, scale=0.5)
 
     # roi align
     _boxes_cuda = torch.from_numpy(boxes).float().cuda()
@@ -119,7 +136,7 @@ def faceRecognition(req):
     image_file = req['image']
     mirror = req['mirror']
     image_object = Image.open(image_file)
-    if mirror=="true": frame = np.array(image_object)[:,::-1,::-1].copy() # RGB -> BGR for opencv, vertical flip
+    if mirror=="true": frame = np.array(image_object)[:,::-1,::-1].copy() # RGB -> BGR for opencv, horizental flip
     else: frame = np.array(image_object)[:,:,::-1].copy() # RGB -> BGR for opencv
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=2.08, minNeighbors=3)
@@ -149,7 +166,7 @@ def index():
 """from video to image extraction"""
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
-    global image_ext_path
+    global image_ext_path, cam_model
     f = request.files['myVideo']
     filename = f.filename # 비디오 이름
     f.save("static/videos/"+filename)
@@ -160,12 +177,13 @@ def api_upload():
 
     rootPath = "static"
     extractor = ImageExtractor(rootPath, filename)
+    extractor.cam_model = cam_model
     # 비디오 ratio 결정 
     extractor.CONSTANT_RATIO = True
     # 비디오 리사이징 - crop 모드
     extractor.resizeVideo(mode="crop", crop_scsle_ratio=crop_scsle_ratio)
     # 비디오 전처리
-    extractor.preprocessVideo(merge_ratio_limit=0.9, SHOW_IMAGE=False)
+    extractor.preprocessVideo(merge_ratio_limit=0.5, SHOW_IMAGE=False)
     # 통계량 추출 
     extractor.getStatistics(SHOW_PLOT=False)
     # # 결과 이미지 영역 크롭
@@ -251,14 +269,14 @@ def api_infer():
     bboxes_all_nms, frame = detect_boxes(req)
     # for saving input image
     im = Image.open(req['image'])
-    if req['mirror']=="true": im = np.array(im)[:,::-1,:].copy() # vertical flip
+    if req['mirror']=="true": im = np.array(im)[:,::-1,:].copy() # horizental flip
     else: im = np.array(im).copy() 
     im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB) 
     cv2.imwrite('predict.jpg', im)
     # for plot image
     plotName = 'plot-'+str(int(time.time()))+'.jpg'
-    plotPath = os.path.join('static/images/plots',plotName)
-    plotPath_for_client = os.path.join('images/plots',plotName)
+    plotPath = os.path.join('static','images','plots',plotName)
+    plotPath_for_client = os.path.join('images','plots',plotName)
     model.save_plot(plotPath)
 
     return json.dumps({
@@ -284,7 +302,7 @@ def api_faceRecog():
 """save confused image api"""
 @app.route('/api/confused', methods=['POST'])
 def api_confused():
-    global image_ext_path
+    global image_ext_path, USE_CAM
     b64 = request.form.get('image_b64')
     idx = int(request.form.get('idx'))
     label = model.reference_classes[idx]
@@ -296,8 +314,17 @@ def api_confused():
     nparr = np.frombuffer(imgbyte, np.uint8)
     img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR) # bgr
     img_np = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB) # rgb
-    with open(imagePath, 'wb') as f:
-            f.write(imgbyte)
+    # mask cam image
+    if USE_CAM:
+        images_normal = cam_model.trans_normal(img_np).unsqueeze(0)
+        images_normal = images_normal.to(cam_model.device)
+        cams_scaled, masks_np = cam_model.getCAM(images_normal)
+        img_cv = img_cv*masks_np[0]
+        img_np = img_np*masks_np[0]
+
+    # with open(imagePath, 'wb') as f:
+    #         f.write(imgbyte)
+    cv2.imwrite(imagePath, img_cv)
     print('[Confused]: Save image - ', imagePath)    
     # remake reference data (RGB)
     model.addNewData_online(img_np, label)

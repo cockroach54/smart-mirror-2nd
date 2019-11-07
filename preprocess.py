@@ -34,6 +34,7 @@ class ImageExtractor:
         self.videoResizedDirPath = os.path.join(self.rootPath, "videos_resized")
         self.imgDirPath = os.path.join(self.rootPath, "images", self.itemName)
         self.imgExtDirPath = os.path.join(self.rootPath, "images_ext", self.itemName)
+        self.cam_model = None
         
         assert bool(self.itemName), "itemName should not be null value."
 
@@ -262,6 +263,14 @@ class ImageExtractor:
     
         try:
             for idx, img_trim in enumerate(self.candidateImages[self.filtered_idx]):
+                # mask image using CAM
+                if(self.cam_model is not None):
+                    image = img_trim[:,:,::-1].copy() # GBR to RGB
+                    images_normal = self.cam_model.trans_normal(image).unsqueeze(0)
+                    images_normal = images_normal.to(self.cam_model.device)
+                    cams_scaled, masks_np = self.cam_model.getCAM(images_normal)
+                    img_trim = img_trim*masks_np[0]
+
                 imgPathOrig = os.path.join(imgDirOrig, str(self.itemName)+'_'+str(idx)+'.jpg')    
                 imgPath = os.path.join(imgDirTemp, "temp"+'_'+str(idx)+'.jpg')
                 cv2.imwrite(imgPath, img_trim) # 이미지 저장
@@ -269,10 +278,10 @@ class ImageExtractor:
                 
                 imgPathOrigFlip = os.path.join(imgDirOrig, str(self.itemName)+'_flip_'+str(idx)+'.jpg')    
                 imgPathFlip = os.path.join(imgDirTemp, "temp"+'_flip_'+str(idx)+'.jpg')
-                cv2.imwrite(imgPathFlip, np.array(img_trim)[:,::-1,:].copy()) # vertical flip 저장
+                cv2.imwrite(imgPathFlip, np.array(img_trim)[:,::-1,:].copy()) # horizental flip 저장
                 os.rename(imgPathFlip, imgPathOrigFlip) #  opencv 한글 패스 저장 안되므로 temp에 만들고 이름 수정 
-        except:
-            print('[Save Img Error:]', imgPath)
+        except Exception as ex:
+            print('[Save Img Error:]', imgDirOrig, ex)
 
         shutil.rmtree(imgDirTemp)
         return

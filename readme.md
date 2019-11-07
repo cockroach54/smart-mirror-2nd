@@ -28,10 +28,11 @@
 ## Demo
  - start server
 ```cmd
-  python server.py --port 5000 --d F
+  python server.py --port 5000 --d F --cam T
 
   --port  <포트번호>
   --d     <flask debug 옵션, 개발시엔-T, 데모시엔-F>
+  --cam   <Class activation model 사용여부, defult-F>
 
   https://127.0.0.1:5000 로 접속 (https!!)
 ```

@@ -130,7 +130,7 @@ class Smoother{
   _deleteCard = (label) => {
       let el_id = `card_${label}`;
       let el = document.querySelector(`#${el_id}`);
-      el.parentElement.removeChild(el);
+      if(el) el.parentElement.removeChild(el);
       return;
   }
 
