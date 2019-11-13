@@ -140,7 +140,7 @@
     <!-- Test page -->
     <div id="Skin-scan-page" class="col s12">
       <div id="cntr" class="container">
-        <div class="fixed-action-btn" style="top:5px">
+        <div class="fixed-action-btn" style="top:5px; height:0px">
           <a
             id='flip-cam'
             class="btn-floating btn-large waves-effect waves-light blue"
@@ -181,7 +181,12 @@
               infer
             </button>
           </div>
-          <div class="input-field col s3">
+          <div class="input-field col s2">
+            <button id="register" class="waves-effect waves-light btn-small">
+              register
+            </button>
+          </div>
+          <div class="input-field col s1">
             <p id="pred"></p>
           </div>
         </div>
@@ -244,7 +249,7 @@
             </p>
           </div>
         </div>        
-        <div class="row" style="margin-bottom:0; display:none">
+        <div class="row" style="margin-bottom:0; display:initial">
           <div class="input-field col s3">
             <input id="rpnNumX" type="number" value="3" step="1"/>
             <label for="rpnNumX">rpnNumX</label>
@@ -297,7 +302,7 @@
     <!-- Modal Structure -->
     <div id="pral-modal" class="modal modal-fixed-footer">
       <div class="modal-content">
-        <h4 style="text-align:center">다음에 사용해 주세요</h4>
+        <h5 style="text-align:center">다음에 사용해 주세요</h5>
         <div style="width: 70%; margin: auto">
           <image src="/images/pral.jpg" style="width: 100%"></image>
         </div>
@@ -306,6 +311,24 @@
       </div>
       <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">확인</a>
+      </div>
+    </div>
+
+    <!-- Modal Structure for item register-->
+    <div id="item-modal" class="modal modal-fixed-footer">
+      <div id="item-modal-content" class="modal-content" style="padding: 10px;">
+        <h5 style="text-align:center">새로운 아이템 등록</h5>
+        <div id="itemCanvasWrapper" style="margin:auto; position: relative;">
+          <!-- <image id="item-img" src="/images/pral.jpg" style="width: 100%"></image> -->
+        </div>
+        <p style="font-size: 1rem; font-weight: bold">다음 사진을 등록하시겠습니까?</p>
+        <div class="input-field">
+          <input id="newItemName" type="text" value="default" />
+          <label for="newItemName">newItemName</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onClick="postItemRegister()" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">확인</button>
       </div>
     </div>
 
@@ -319,7 +342,6 @@
     <!-- <script type="text/javascript" charset="utf-8" src="socket.js"></script> -->
 
     <script>
-      // CODELAB: Register service worker.
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           window.myItemList = ["LG-praL", "ISOI-인텐시브__에너자이징크림"]; // 내 화장품 리스트
@@ -355,6 +377,40 @@
           // modal init
           let elems = document.querySelectorAll('.modal');
           window.modalInstances = M.Modal.init(elems, {});
+
+          // 아이템 이름 동기화
+          let globalItemName = 'default';
+          document.querySelector("#itemName").addEventListener('keyup', (e)=>{
+              globalItemName = e.target.value;
+              document.querySelector("#newItemName").value = globalItemName;
+          });
+          document.querySelector("#newItemName").addEventListener('keyup', (e)=>{
+              globalItemName = e.target.value;
+              document.querySelector("#itemName").value = globalItemName;
+          });
+          
+          // itemCanvas modal
+          document.querySelector('#register').addEventListener('click', ()=>{
+            window.modalInstances[1].open();
+            
+            itemCanvas.width = document.querySelector('#item-modal-content').clientWidth*0.9;
+            itemCanvas.height = itemCanvas.width*(v.videoHeight / v.videoWidth);
+            if(mirror){
+              // horizental flip
+              itemCtx.translate(itemCanvas.width, 0);
+              itemCtx.scale(-1, 1);
+            }
+            itemCtx.strokeStyle = "rgba(255,0,0,0.5)";
+            itemCtx.fillStyle = "rgba(0,255,0,0.5)";
+
+            let itemCanvasWrapper = document.querySelector('#itemCanvasWrapper')
+            itemCanvasWrapper.appendChild(itemCanvas);
+            itemCanvasWrapper.style.width = itemCanvas.width+'px';
+            itemCanvasWrapper.style.height = itemCanvas.height+'px';
+
+            itemCtx.drawImage(v,0,0,v.videoWidth,v.videoHeight,0,0,itemCanvas.width,itemCanvas.height);
+            imageCtx.drawImage(v,0,0,v.videoWidth,v.videoHeight,0,0,uploadWidth,uploadWidth * (v.videoHeight / v.videoWidth));
+          });
 
           // tab-page init
           window.tabInstance = M.Tabs.init(myTabs, {onShow:tabInstanceOnshow});

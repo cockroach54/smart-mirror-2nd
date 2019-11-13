@@ -5,21 +5,30 @@
 class Smoother{
   constructor(timeWindow){
       this.timeWindow = timeWindow;
-      let startTime = Date.now();
-      setForDetect('api/detectweb').then(d => {
-          this.duration = Date.now()-startTime; // 서버 다녀오는 시간, ms
-          this.labels = d.labels.map(x=>x.replace(/\s/g, '__')); // 스페이스 html 아이디 사용불가 보정
-          this.classNum = this.labels.length;
-          this.threshold = 0.6; // 큐 평균값 threshold
-          this.sequenceNum = Math.round(this.timeWindow/this.duration) || 1; // sequenceNum = 물체 노출시간(timWindow)/duration, ex) 20/10 = 2sec
-          this.smoothDataQueue = [];
-          this.detctedItemHistory = [];
-          for(let i=0; i<this.classNum; i++) this.smoothDataQueue.push(new Array(this.sequenceNum).fill(0))
-          this.classStateList = new Array(this.labels.length).fill(false); // 현재 스무딩 데이터가 threshold값을 넘었는지 각 class마다의 상태를 저장해두는 리스트
-          this.prevClassStateList = new Array(this.labels.length).fill(false); // 현재 스무딩 데이터가 threshold값을 넘었는지 각 class마다의 상태를 저장해두는 리스트
-          console.log('[Smoother]', '<labels>', this.labels, '<timeWindow>', this.timeWindow, '<seqNum>', this.sequenceNum);
-          document.querySelector('#screenInfo').innerText += `\n <timeWindow> ${this.timeWindow}, <seqNum> ${this.sequenceNum}`;
-      });
+    }
+    
+    init = () => {
+        // initialize smoother
+        return new Promise((resolve, reject) => {
+            let startTime = Date.now();
+            setForDetect('api/detectweb').then(d => {
+                this.duration = Date.now()-startTime; // 서버 다녀오는 시간, ms
+                this.labels = d.labels.map(x=>x.replace(/\s/g, '__')); // 스페이스 html 아이디 사용불가 보정
+                this.classNum = this.labels.length;
+                this.threshold = 0.6; // 큐 평균값 threshold
+                this.sequenceNum = Math.round(this.timeWindow/this.duration) || 1; // sequenceNum = 물체 노출시간(timWindow)/duration, ex) 20/10 = 2sec
+                this.smoothDataQueue = [];
+                this.detctedItemHistory = [];
+                for(let i=0; i<this.classNum; i++) this.smoothDataQueue.push(new Array(this.sequenceNum).fill(0))
+                this.classStateList = new Array(this.labels.length).fill(false); // 현재 스무딩 데이터가 threshold값을 넘었는지 각 class마다의 상태를 저장해두는 리스트
+                this.prevClassStateList = new Array(this.labels.length).fill(false); // 이전 스무딩 데이터가 threshold값을 넘었는지 각 class마다의 상태를 저장해두는 리스트
+                console.log('[Smoother]', '<labels>', this.labels, '<timeWindow>', this.timeWindow, '<seqNum>', this.sequenceNum);
+                document.querySelector('#screenInfo').innerText += `\n <timeWindow> ${this.timeWindow}, <seqNum> ${this.sequenceNum}, mirror: ${mirror}`;
+                resolve();
+            }).catch(e => {
+                reject(e);
+            })
+        });
   }
 
   renewQueue = (bboxes) => {

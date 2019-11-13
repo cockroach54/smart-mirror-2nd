@@ -87,14 +87,14 @@ def detect_boxes(req):
     im_tensor = model.roi_transform(frame).data.to(model.device).unsqueeze(0)
     featuremaps = model(im_tensor)
     # region proposal network extracts ROIs
-    # boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
-    boxes, scores = rpn(frame, num_boxs=300, scale=0.5)
+    boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
+    # boxes, scores = rpn(frame, num_boxs=300, scale=0.5)
 
     # roi align
     _boxes_cuda = torch.from_numpy(boxes).float().cuda()
     rois = get_rois(im_tensor, featuremaps, _boxes_cuda)
 
-    preds, preds_dist= model.inference_tensor3(rois, 'cos', knn=True)
+    preds, preds_dist= model.inference_tensor3(rois, 'cos', knn=False)
 
     # objectness filterling
     filter_idx = (preds_dist[:,0]>model.threshold).type(torch.bool).cpu()
@@ -127,7 +127,7 @@ def detect_boxes(req):
         for idx, (box, pred, dist) in enumerate(bboxes_all_nms):        
             pred_label = model.reference_classes[pred]
             res_text = pred_label+"("+str(dist)+")"
-            print(idx, ':', res_text, box)
+            print(pred, ':', res_text, box)
     return bboxes_all_nms, frame
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -162,6 +162,11 @@ def after_request(response):
 @app.route('/index.html')
 def index():
     return render_template('index.html')
+
+@app.route('/api/restart')
+def api_restart():
+    global image_ext_path
+    model.makeAllReference_online(image_ext_path)
 
 """from video to image extraction"""
 @app.route('/api/upload', methods=['POST'])
@@ -279,6 +284,8 @@ def api_infer():
     plotPath_for_client = os.path.join('images','plots',plotName)
     model.save_plot(plotPath)
 
+    print('[Model classes]:', model.reference_classes)
+
     return json.dumps({
         'success': True,
         'labels': model.reference_classes,
@@ -322,8 +329,6 @@ def api_confused():
         img_cv = img_cv*masks_np[0]
         img_np = img_np*masks_np[0]
 
-    # with open(imagePath, 'wb') as f:
-    #         f.write(imgbyte)
     cv2.imwrite(imagePath, img_cv)
     print('[Confused]: Save image - ', imagePath)    
     # remake reference data (RGB)
@@ -332,6 +337,62 @@ def api_confused():
     return json.dumps({
         'success': True,
         'imagePath': imagePath
+    }, cls=MyEncoder)
+
+"""trim and save image api"""
+@app.route('/api/savetrim', methods=['POST'])
+def api_savetrim():
+    global image_ext_path, USE_CAM
+    req = {}
+    req['image'] = request.files['image']
+    req['mirror'] = request.form.get('mirror')
+    itemName = request.form.get('name')
+    coords_r = list(map(lambda x: float(x), request.form.get('coords').split(','))) # rx1,ry1,rx2,ry2
+
+    im = Image.open(req['image'])
+    if req['mirror']=="true": img_np = np.array(im)[:,::-1,:].copy() # horizental flip, rgb
+    else: img_np = np.array(im).copy() # rgb
+    img_cv = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB) # bgr
+    coords = [coords_r[0]*img_cv.shape[1], coords_r[1]*img_cv.shape[0], coords_r[2]*img_cv.shape[1], coords_r[3]*img_cv.shape[0]]
+    coords = np.array(coords, dtype=np.int)
+    print('[Trim coords]', coords, img_cv.shape)
+    img_cv = img_cv[coords[1]:coords[3], coords[0]:coords[2]] # trim
+
+    # mask cam image
+    if USE_CAM:
+        images_normal = cam_model.trans_normal(img_np).unsqueeze(0)
+        images_normal = images_normal.to(cam_model.device)
+        cams_scaled, masks_np = cam_model.getCAM(images_normal)
+        img_cv = img_cv*masks_np[0]
+        img_np = img_np*masks_np[0]
+
+    # save image
+    cv2.imwrite('savetrim.jpg', img_cv) # for debug
+    dirPath = os.path.join(image_ext_path, itemName)
+    isExist = os.path.isdir(dirPath)
+
+    # new label
+    if(not isExist):
+        print('[Savetrim]: make new dir', itemName)
+        os.mkdir(dirPath)
+
+    # thumbnail용 이미지 먼저 확인
+    fileName = itemName+'_1.jpg'
+    imagePath = os.path.join(dirPath, fileName)
+    if(os.path.exists(imagePath)):
+        fileName = itemName+'-'+str(int(time.time()))+'.jpg'
+        imagePath = os.path.join(dirPath, fileName)        
+    cv2.imwrite(imagePath, img_cv)
+    print('[Savetrim]: Save image - ', imagePath)    
+
+    # already exist label
+    if(isExist): model.addNewData_online(img_np, itemName)
+    else: model.addNewLabel_online(image_ext_path, itemName)
+
+    return json.dumps({
+        'success': True,
+        'imagePath': imagePath,
+        'newLabel': not isExist
     }, cls=MyEncoder)
 
 

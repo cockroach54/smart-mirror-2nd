@@ -149,6 +149,7 @@ class OracleModel(nn.Module):
         # add new label
         if label not in self.dir_list_online: # 중복된 이름 없을 시 새로 등록
             self.dir_list_online.append(label)
+            self.dir_list_online.sort() # 반드시 소팅해서 클래스 번호 재정렬 해줘야함
         # concat to prev df_ref_online
         _df_ref_online_non_overlap = self.df_ref_online[self.df_ref_online['label']!=label] # 중복된 이전 데이터 제거
         self.df_ref_online = pd.concat([_df_ref_online_non_overlap, new_df_ref_online], ignore_index=True)
