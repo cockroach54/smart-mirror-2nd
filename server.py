@@ -7,7 +7,7 @@ import numpy as np
 from time import sleep
 import cv2
 from preprocess import *
-from detector2 import *
+from detector import *
 from cam_conv_model import *
 from utils import *
 
@@ -74,6 +74,7 @@ def detect_boxes(req):
     rpnNumX = req['rpnNumX']
     rpnNumY = req['rpnNumY']
     rpnScale = req['rpnScale']
+    edgeboxes = req['edgeboxes']
 
     model.threshold = threshold
 
@@ -87,8 +88,8 @@ def detect_boxes(req):
     im_tensor = model.roi_transform(frame).data.to(model.device).unsqueeze(0)
     featuremaps = model(im_tensor)
     # region proposal network extracts ROIs
-    boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
-    # boxes, scores = rpn(frame, num_boxs=300, scale=0.5)
+    if(edgeboxes): boxes, scores = rpn(frame, num_boxs=300, scale=0.5)
+    else: boxes = rpn2(frame, n_slice_x=rpnNumX, n_slice_y=rpnNumY, scale=rpnScale)
 
     # roi align
     _boxes_cuda = torch.from_numpy(boxes).float().cuda()
@@ -212,6 +213,7 @@ def api_detectweb():
     req['rpnNumX'] = int(request.form.get('rpnNumX'))
     req['rpnNumY'] = int(request.form.get('rpnNumY'))
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
+    req['edgeboxes'] = True if request.form.get('edgeboxes')=='true' else False
     # bboxes_all_nms = detect_boxes(req)
 
     # return json.dumps({
@@ -271,6 +273,8 @@ def api_infer():
     req['rpnNumX'] = int(request.form.get('rpnNumX'))
     req['rpnNumY'] = int(request.form.get('rpnNumY'))
     req['rpnScale'] = [float(request.form.get('rpnScaleX')), float(request.form.get('rpnScaleY'))]
+    req['edgeboxes'] = True if request.form.get('edgeboxes')=='true' else False
+
     bboxes_all_nms, frame = detect_boxes(req)
     # for saving input image
     im = Image.open(req['image'])
@@ -378,11 +382,16 @@ def api_savetrim():
 
     # thumbnail용 이미지 먼저 확인
     fileName = itemName+'_1.jpg'
+    flipFileName = itemName+'_flip_1.jpg'
     imagePath = os.path.join(dirPath, fileName)
+    flipImagePath = os.path.join(dirPath, flipFileName)
     if(os.path.exists(imagePath)):
         fileName = itemName+'-'+str(int(time.time()))+'.jpg'
+        flipFileName = itemName+'_flip-'+str(int(time.time()))+'.jpg'
         imagePath = os.path.join(dirPath, fileName)        
+        flipImagePath = os.path.join(dirPath, flipFileName)
     cv2.imwrite(imagePath, img_cv)
+    cv2.imwrite(flipImagePath, img_cv[:,::-1,:]) # horizental flip image save
     print('[Savetrim]: Save image - ', imagePath)    
 
     # already exist label
@@ -391,7 +400,7 @@ def api_savetrim():
 
     return json.dumps({
         'success': True,
-        'imagePath': imagePath,
+        'itemName': itemName,
         'newLabel': not isExist
     }, cls=MyEncoder)
 

@@ -80,6 +80,32 @@ def rpn(im_opencv, num_boxs, scale=1, min_score=0.01):
 
     return boxes, scores
 
+def makeAnchors(boxes):
+    """
+    1:1, 1:2, 2:1 *scale(1, 0.75, 0.56) 총 9가지 앵커 생성
+    @params boxes - N*4 , x,y,w,h
+    """
+    new_boxes = []
+    for box in boxes:
+        x,y,w,h = box
+        cx = x+w/2
+        cy = y+h/2
+        for s in [1, 0.75, 0.75]: # 누적곱으로 비율 게산 즉, 1, 0.75, 0.75^2
+            w = w*s
+            h = h*s
+            x = cx-w/2
+            y = cy-h/2
+            # w:h = 1:2, x2,y,w2,h
+            w2 = w/2
+            x2 = cx-w2/2
+            # w:h = 2:1, x,y2,w,h2
+            h2 = h/2
+            y2 = cy-h2/2
+            new_box = np.array([[x,y,w,h],[x2,y,w2,h],[x,y2,w,h2]])
+            new_boxes.append(new_box)
+    new_boxes = np.concatenate(new_boxes).astype(np.int)
+    return new_boxes
+
 def rpn2(im, n_slice_x, n_slice_y, scale=(1,1)):
     """
     n분할 rpn
@@ -87,28 +113,29 @@ def rpn2(im, n_slice_x, n_slice_y, scale=(1,1)):
     @return 
     """
     len_y, len_x, _ = im.shape
-    w = int(len_x/n_slice_x)
-    h = int(len_y/n_slice_y)    
+    w = len_x/n_slice_x
+    h = len_y/n_slice_y
 
-    cxs = [int(w/2)+w*i for i in range(n_slice_x)]
-    cys = [int(h/2)+h*i for i in range(n_slice_y)]
+    cxs = [w/2+w*i for i in range(n_slice_x)]
+    cys = [h/2+h*i for i in range(n_slice_y)]
     
     rois = []
     boxes = []
     for cx in cxs:
         for cy in cys:
-            x=int(cx-w/2); y=int(cy-h/2)
+            x=cx-w/2; y=cy-h/2
             w_diff = w*(1-scale[0])/2
             h_diff = h*(1-scale[1])/2
-            w_modi = int(w*scale[0])
-            h_modi = int(h*scale[1])
-            x_modi = int(x+w_diff)
-            y_modi = int(y+h_diff)
+            w_modi = w*scale[0]
+            h_modi = h*scale[1]
+            x_modi = x+w_diff
+            y_modi = y+h_diff
 
             boxes.append([max(0,x_modi),max(0,y_modi),w_modi,h_modi]) # x,y,w,h
 
     boxes = np.array(boxes)
-    return boxes
+    new_boxes = makeAnchors(boxes)
+    return new_boxes
 
 def get_rois(images, featuremaps, bboxes):
     # calc bbox ratio

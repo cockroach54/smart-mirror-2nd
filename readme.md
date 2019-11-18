@@ -1,6 +1,7 @@
 # Smart mirror 2nd project
  - few shot
- - universal
+ - open domain
+ - personalized
  - object detector
 
 ## server
@@ -22,13 +23,14 @@
  - menifest.json for a2hs
  - app pages guide  
 <img src='static/images/pages.jpg' style="width:80%">
+<img src='static/images/app-guide.jpg' style="width:80%">
  
  ---
 
 ## Demo
  - start server
 ```cmd
-  python server.py --port 5000 --d F --cam T
+  python server.py --port 5000 --d F --cam F
 
   --port  <포트번호>
   --d     <flask debug 옵션, 개발시엔-T, 데모시엔-F>
@@ -46,9 +48,10 @@
   - GPU CUDA
   - ffmpeg
 
-- Derectories
+- Derectories 주요 파일 정리
 ```txt
 ├── detector.py -> 파이토치 오브젝트 디텍터 모델
+├── extractor.py -> opencv 비디오 이미지 추출 모델
 ├── haarcascade_frontalface_default.xml -> opencv 얼굴인식 모델
 ├── model.yml.gz -> opencv Edgebox region proposal 모델
 ├── preprocess.py -> opencv 비디오 - 이미지 전처리 모델

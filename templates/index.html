@@ -190,6 +190,7 @@
             <p id="pred"></p>
           </div>
         </div>
+
         <div class="row" style="margin-bottom:0">
           <div class="input-field col s2">
             <p>FPS: <span id="fps" style="color: red; font-weight: bold">0</span></p>
@@ -250,23 +251,30 @@
           </div>
         </div>        
         <div class="row" style="margin-bottom:0; display:initial">
-          <div class="input-field col s3">
+          <div class="input-field col s2">
             <input id="rpnNumX" type="number" value="3" step="1"/>
             <label for="rpnNumX">rpnNumX</label>
           </div>
-          <div class="input-field col s3">
+          <div class="input-field col s2">
             <input id="rpnNumY" type="number" value="1" step="1"/>
             <label for="rpnNumY">rpnNumY</label>
           </div>
-          <div class="input-field col s3">
+          <div class="input-field col s2">
             <input id="rpnScaleX" type="number" value="1.2" step="0.1"/>
             <label for="rpnScaleX">rpnScaleX</label>
           </div>
-          <div class="input-field col s3">
+          <div class="input-field col s2">
             <input id="rpnScaleY" type="number" value="0.8" step="0.1"/>
             <label for="rpnScaleY">rpnScaleY</label>
           </div>
+          <div class="input-field col s4">
+            <label>
+              <input id="edgeboxes" class="filled-in" type="checkbox"/>
+              <span>Edgeboxes</span>
+            </label>
+          </div>
         </div>
+
         <p id="screenInfo"></p>
         <hr style="border-color:#26A69A" />
         <div>
@@ -319,7 +327,6 @@
       <div id="item-modal-content" class="modal-content" style="padding: 10px;">
         <h5 style="text-align:center">새로운 아이템 등록</h5>
         <div id="itemCanvasWrapper" style="margin:auto; position: relative;">
-          <!-- <image id="item-img" src="/images/pral.jpg" style="width: 100%"></image> -->
         </div>
         <p style="font-size: 1rem; font-weight: bold">다음 사진을 등록하시겠습니까?</p>
         <div class="input-field">
@@ -328,7 +335,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button onClick="postItemRegister()" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">확인</button>
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">취소</a>
+        <a onClick="postItemRegister()" class="modal-close waves-effect waves-green btn-flat" style="z-index: 999">확인</a>
       </div>
     </div>
 
@@ -389,8 +397,9 @@
               document.querySelector("#itemName").value = globalItemName;
           });
           
-          // itemCanvas modal
+          // itemCanvas modal open
           document.querySelector('#register').addEventListener('click', ()=>{
+            itemCoords = null;
             window.modalInstances[1].open();
             
             itemCanvas.width = document.querySelector('#item-modal-content').clientWidth*0.9;

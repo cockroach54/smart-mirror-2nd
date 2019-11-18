@@ -6,6 +6,8 @@ let rpnNumX = document.querySelector("#rpnNumX");
 let rpnNumY = document.querySelector("#rpnNumY");
 let rpnScaleX = document.querySelector("#rpnScaleX");
 let rpnScaleY = document.querySelector("#rpnScaleY");
+let edgeboxes = document.querySelector("#edgeboxes");
+
 
 let radioEl = document.getElementsByName("radio-for-box");
 let onlyOneEl = document.querySelector("#onlyOne");
@@ -147,6 +149,7 @@ function clearNdraw() {
 }
 
 function rpn2(n_slice_x, n_slice_y, scale = [1, 1]) {
+  // get fixed region coordinate for rendering drawCanvas 
   let len_x = drawCanvas.width;
   let len_y = drawCanvas.height;
   let w = len_x / n_slice_x;
@@ -179,8 +182,19 @@ function rpn2(n_slice_x, n_slice_y, scale = [1, 1]) {
   return boxes;
 }
 
+// 수동 트림 아이템 등록 api
 function postItemRegister(url) {
+  if(!itemCoords){
+    M.toast({
+      html: `등록할 물체 영역을 선택하지 않았습니다!`,
+      classes: "rounded my-toast"
+    });
+    imageCanvas.toBlob(file => {}); // 비디오 화면 멈추는 버그 해결용
+    return;
+  }
+  
   return new Promise((resolve, reject) => {
+
     imageCanvas.toBlob(file => {
       let _itemName = document.querySelector("#newItemName").value;
       let formdata = new FormData();
@@ -193,6 +207,7 @@ function postItemRegister(url) {
         body: formdata
       };
       let url = "api/savetrim";
+
       fetch(url, myInit)
         .then(res => {
           if (res.status === 200 || res.status === 201) {
@@ -208,7 +223,7 @@ function postItemRegister(url) {
         .then(d => {
           console.log(d);
           M.toast({
-            html: "추가 사진으로 등록 완료!",
+            html: `"${d.itemName}"에 추가 사진으로 등록 완료!`,
             classes: "rounded my-toast"
           });
           resolve(d);
@@ -236,7 +251,7 @@ function handleMouseDown(e) {
     isFirstTouch = !isFirstTouch;
     xxx1 = mousePos.x;
     yyy1 = mousePos.y;
-    let w = 4;
+    let w = 6;
     if(mirror) itemCtx.fillRect(itemCanvas.width-(xxx1 - w / 2), yyy1 - w / 2, -1*w, w);
     else itemCtx.fillRect(xxx1 - w / 2, yyy1 - w / 2, w, w);
   }
@@ -245,7 +260,7 @@ function handleMouseDown(e) {
     isFirstTouch = !isFirstTouch;
     xxx2 = mousePos.x;
     yyy2 = mousePos.y;
-    let w = 4;
+    let w = 6;
     if(mirror){
       itemCtx.strokeRect(itemCanvas.width-xxx1, yyy1, -1*(xxx2 - xxx1), yyy2 - yyy1);
       itemCtx.fillRect(itemCanvas.width-(xxx2 - w / 2), yyy2 - w / 2, -1*w, w);
@@ -259,6 +274,7 @@ function handleMouseDown(e) {
     let rx2 = Math.max(xxx1, xxx2) / itemCanvas.width;
     let ry2 = Math.max(yyy1, yyy2) / itemCanvas.height;
     itemCoords = [rx1, ry1, rx2, ry2];
+    return;
   }
 }
 function getMousePosition(itemCanvas, e) {
@@ -299,6 +315,7 @@ function setForDetect(url) {
       formdata.append("rpnNumY", rpnNumY.value);
       formdata.append("rpnScaleX", rpnScaleX.value);
       formdata.append("rpnScaleY", rpnScaleY.value);
+      formdata.append("edgeboxes", edgeboxes.checked);
       formdata.append("mirror", mirror);
       let myInit = {
         method: "POST",
@@ -405,13 +422,16 @@ function detectPost() {
         // console.log(d);
         clearNdraw();
 
-        drawCtx.strokeStyle = "rgba(225,255,0,0.5)";
-        let rois = rpn2(rpnNumX.value * 1, rpnNumY.value * 1, [
-          rpnScaleX.value * 1,
-          rpnScaleY.value * 1
-        ]);
-        for (let box of rois) {
-          drawCtx.strokeRect(...box);
+        if(!edgeboxes.checked){
+          // render fixed rpn region only using rpn2
+          drawCtx.strokeStyle = "rgba(225,255,0,0.5)"; // yellow
+          let rois = rpn2(rpnNumX.value * 1, rpnNumY.value * 1, [
+            rpnScaleX.value * 1,
+            rpnScaleY.value * 1
+          ]);
+          for (let box of rois) {
+            drawCtx.strokeRect(...box);
+          }
         }
 
         for (bbox of d.bboxes) {
